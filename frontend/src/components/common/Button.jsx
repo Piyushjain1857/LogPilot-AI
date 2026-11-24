@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import LoadingSpinner from "./LoadingSpinner";
 
 export default function Button({
@@ -11,8 +12,29 @@ export default function Button({
   onClick,
   type = "button",
   className = "",
+  to,
   ...props
 }) {
+  let navigate;
+  try {
+    navigate = useNavigate();
+  } catch {
+    // Fallback if rendered outside Router context in edge unit tests
+    navigate = null;
+  }
+
+  const handleClick = (e) => {
+    if (disabled || loading) return;
+    if (onClick) onClick(e);
+    if (to && !e.defaultPrevented) {
+      if (navigate) {
+        navigate(to);
+      } else if (typeof window !== "undefined") {
+        window.location.href = to;
+      }
+    }
+  };
+
   const classNames = [
     "btn",
     `btn-${variant}`,
@@ -25,7 +47,7 @@ export default function Button({
       type={type}
       className={classNames}
       disabled={disabled || loading}
-      onClick={onClick}
+      onClick={handleClick}
       {...props}
     >
       {loading ? (

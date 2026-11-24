@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Terminal,
   ArrowRight,
@@ -18,7 +18,16 @@ import Badge from "../components/common/Badge";
 import ThemeToggle from "../components/common/ThemeToggle";
 
 export default function LandingPage() {
+  const navigate = useNavigate();
   const [activePreviewTab, setActivePreviewTab] = useState("ingest");
+
+  const scrollToSection = (id) => (e) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   const previewTabs = [
     { id: "ingest", label: "01. Log Ingestion & Redaction", badge: "Live in Phase 3" },
@@ -112,10 +121,18 @@ export default function LandingPage() {
         </div>
 
         <nav style={{ display: "flex", alignItems: "center", gap: "var(--space-6)" }}>
-          <a href="#features" style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 500 }}>
+          <a
+            href="#features"
+            onClick={scrollToSection("features")}
+            style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+          >
             Capabilities
           </a>
-          <a href="#workflow" style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 500 }}>
+          <a
+            href="#workflow"
+            onClick={scrollToSection("workflow")}
+            style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+          >
             How It Works
           </a>
           <Link to="/app/log-sources" style={{ color: "var(--text-secondary)", fontSize: 13, fontWeight: 500 }}>
@@ -128,11 +145,14 @@ export default function LandingPage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <ThemeToggle />
-          <Link to="/app">
-            <Button variant="primary" size="sm" icon={ArrowRight}>
-              Launch Workspace
-            </Button>
-          </Link>
+          <Button
+            to="/app"
+            variant="primary"
+            size="sm"
+            icon={ArrowRight}
+          >
+            Launch Workspace
+          </Button>
         </div>
       </header>
 
@@ -153,16 +173,22 @@ export default function LandingPage() {
         </p>
 
         <div className="landing-actions" style={{ display: "flex", justifyContent: "center", gap: "var(--space-3)", marginBottom: "var(--space-10)" }}>
-          <Link to="/app">
-            <Button variant="primary" size="lg" icon={ArrowRight}>
-              Open Observability Console
-            </Button>
-          </Link>
-          <Link to="/app/log-sources">
-            <Button variant="secondary" size="lg" icon={UploadCloud}>
-              Upload Log Files
-            </Button>
-          </Link>
+          <Button
+            to="/app"
+            variant="primary"
+            size="lg"
+            icon={ArrowRight}
+          >
+            Open Observability Console
+          </Button>
+          <Button
+            to="/app/log-sources"
+            variant="secondary"
+            size="lg"
+            icon={UploadCloud}
+          >
+            Upload Log Files
+          </Button>
         </div>
 
         {/* Interactive Feature Demo Container */}
@@ -329,11 +355,13 @@ export default function LandingPage() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Zero Command Execution Sandbox Guarantee</span>
-                  <Link to="/app/troubleshooter">
-                    <button type="button" className="btn btn-primary btn-xs">
-                      Try Interactive Diagnostic Studio →
-                    </button>
-                  </Link>
+                  <Button
+                    to="/app/troubleshooter"
+                    variant="primary"
+                    size="xs"
+                  >
+                    Try Interactive Diagnostic Studio →
+                  </Button>
                 </div>
               </div>
             )}
@@ -354,11 +382,13 @@ export default function LandingPage() {
                   <li>Step 2: Terminate idle in-transaction locks exceeding 2 minutes.</li>
                   <li>Step 3: Apply missing composite index on inventory_locks(sku, locked_at).</li>
                 </ol>
-                <Link to="/app/remediation">
-                  <button type="button" className="btn btn-secondary btn-xs">
-                    Inspect Full Runbook Runner →
-                  </button>
-                </Link>
+                <Button
+                  to="/app/remediation"
+                  variant="secondary"
+                  size="xs"
+                >
+                  Inspect Full Runbook Runner →
+                </Button>
               </div>
             )}
           </div>
