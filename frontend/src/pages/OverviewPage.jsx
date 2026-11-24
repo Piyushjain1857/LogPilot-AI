@@ -63,17 +63,7 @@ const SEVERITY_BAR_COLORS = {
 export default function OverviewPage() {
   const { autoRefreshEnabled, autoRefreshInterval } = useWorkspace();
 
-  let streamingState = {
-    connectionStatus: "DISCONNECTED",
-    streamMetrics: { logsPerSecond: 0, errorsPerMinute: 0, queueDepth: 0, activeSources: 0 },
-    totalSessionEvents: 0,
-  };
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    streamingState = useStreaming();
-  } catch (_) {
-    // Graceful fallback when rendered outside StreamingProvider in isolated component tests
-  }
+  const streamingState = useStreaming();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
