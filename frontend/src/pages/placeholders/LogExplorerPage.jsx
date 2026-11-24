@@ -1,22 +1,40 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageHeader from "../../components/common/PageHeader";
+import AdvancedSearchBar from "../../components/search/AdvancedSearchBar";
+import SavedSearchesModal from "../../components/search/SavedSearchesModal";
+import ExportDialog from "../../components/search/ExportDialog";
+import LogDetailDrawer from "../../components/search/LogDetailDrawer";
 import LogTable from "../../components/logs/LogTable";
 import UploadWizard from "../../components/ingestion/UploadWizard";
-import { logService } from "../../services/logService";
+import { searchService } from "../../services/searchService";
 import { logSourceService } from "../../services/logSourceService";
-import { Search, RefreshCw, UploadCloud, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { logService } from "../../services/logService";
+import {
+  RefreshCw,
+  UploadCloud,
+  Download,
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Zap,
+  Filter,
+  X,
+} from "lucide-react";
 
 export default function LogExplorerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Search & Filter state
-  const batchIdParam = searchParams.get("batch_id") || "";
-  const [searchQuery, setSearchQuery] = useState("");
-  const [severity, setSeverity] = useState("ALL");
-  const [selectedSourceId, setSelectedSourceId] = useState("");
-  const [serviceName, setServiceName] = useState("");
-  const [uploadBatchId, setUploadBatchId] = useState(batchIdParam);
+  // Query & Filter state
+  const initialQuery = searchParams.get("q") || "";
+  const initialSeverity = searchParams.get("severity") || "ALL";
+  const initialService = searchParams.get("service") || "";
+  const initialSourceId = searchParams.get("source_id") || "";
+
+  const [query, setQuery] = useState(initialQuery);
+  const [severity, setSeverity] = useState(initialSeverity);
+  const [serviceName, setServiceName] = useState(initialService);
+  const [selectedSourceId, setSelectedSourceId] = useState(initialSourceId);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
 
@@ -24,14 +42,20 @@ export default function LogExplorerPage() {
   const [logs, setLogs] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sources, setSources] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
 
-  // Wizard state
+  // Modals & Drawers state
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
+  const [savedSearches, setSavedSearches] = useState([]);
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
-  // Fetch sources for dropdown
+  // Load sources for dropdown
   useEffect(() => {
     logSourceService
       .listSources()
@@ -39,226 +63,397 @@ export default function LogExplorerPage() {
       .catch((err) => console.error("Failed to load sources:", err));
   }, []);
 
-  // Sync batch_id param changes
+  // Fetch search suggestions on query input
   useEffect(() => {
-    if (batchIdParam) {
-      setUploadBatchId(batchIdParam);
+    if (query.trim().length > 1) {
+      searchService
+        .getSuggestions(query.trim())
+        .then((data) => setSuggestions(data || []))
+        .catch(() => {});
+    } else {
+      searchService
+        .getSuggestions("")
+        .then((data) => setSuggestions(data || []))
+        .catch(() => {});
     }
-  }, [batchIdParam]);
+  }, [query]);
 
-  // Fetch logs with server-side pagination & filtering
+  // Load saved searches
+  const loadSavedSearches = useCallback(async () => {
+    try {
+      const data = await searchService.listSavedSearches();
+      setSavedSearches(data || []);
+    } catch (_) {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSavedSearches();
+  }, [loadSavedSearches]);
+
+  // Execute Search
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const params = {
+      const filters = {};
+      if (severity && severity !== "ALL") filters.severity = severity;
+      if (serviceName.trim()) filters.service_name = serviceName.trim();
+      if (selectedSourceId) filters.source_id = selectedSourceId;
+
+      const payload = {
+        query: query.trim() || undefined,
+        filters: Object.keys(filters).length > 0 ? filters : undefined,
         page,
         page_size: pageSize,
+        sort_by: "timestamp",
+        sort_order: "desc",
       };
-      if (searchQuery.trim()) params.search = searchQuery.trim();
-      if (severity && severity !== "ALL") params.severity = severity;
-      if (selectedSourceId) params.source_id = selectedSourceId;
-      if (serviceName.trim()) params.service_name = serviceName.trim();
-      if (uploadBatchId) params.upload_batch_id = uploadBatchId;
 
-      const data = await logService.listLogs(params);
-      setLogs(data.items || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.total_pages || 1);
+      let res;
+      try {
+        res = await searchService.advancedSearch(payload);
+      } catch (searchErr) {
+        if (logService && typeof logService.listLogs === "function") {
+          try {
+            res = await logService.listLogs({
+              page,
+              page_size: pageSize,
+              severity: severity !== "ALL" ? severity : undefined,
+              service_name: serviceName.trim() || undefined,
+            });
+          } catch (_) {
+            throw searchErr;
+          }
+        } else {
+          throw searchErr;
+        }
+      }
+      setLogs(res.items || []);
+      setTotal(res.total || 0);
+      setTotalPages(res.total_pages || 1);
+      setStats(res.stats || null);
     } catch (err) {
-      setError(err.details || err.message || "Failed to query logs from backend.");
+      setError(err.response?.data?.detail || err.message || "Search query failed.");
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, searchQuery, severity, selectedSourceId, serviceName, uploadBatchId]);
+  }, [page, pageSize, query, severity, serviceName, selectedSourceId]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
+  const handleSearchSubmit = () => {
     setPage(1);
     fetchLogs();
   };
 
   const handleClearFilters = () => {
-    setSearchQuery("");
+    setQuery("");
     setSeverity("ALL");
-    setSelectedSourceId("");
     setServiceName("");
-    setUploadBatchId("");
+    setSelectedSourceId("");
     setPage(1);
     setSearchParams({});
   };
 
+  const handleSaveSearch = async (saveData) => {
+    try {
+      await searchService.createSavedSearch(saveData);
+      loadSavedSearches();
+    } catch (err) {
+      console.error("Failed to save search:", err);
+    }
+  };
+
+  const handleDeleteSavedSearch = async (id) => {
+    try {
+      await searchService.deleteSavedSearch(id);
+      loadSavedSearches();
+    } catch (err) {
+      console.error("Failed to delete saved search:", err);
+    }
+  };
+
+  const handleExport = async ({ format, limit }) => {
+    const filters = {};
+    if (severity && severity !== "ALL") filters.severity = severity;
+    if (serviceName.trim()) filters.service_name = serviceName.trim();
+    if (selectedSourceId) filters.source_id = selectedSourceId;
+
+    const blob = await searchService.exportLogs({
+      query: query.trim() || undefined,
+      filters: Object.keys(filters).length > 0 ? filters : undefined,
+      format,
+      limit,
+    });
+
+    const url = window.URL.createObjectURL(new Blob([blob]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `logpilot_export_${Date.now()}.${format}`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+  };
+
   const hasActiveFilters = Boolean(
-    searchQuery || (severity && severity !== "ALL") || selectedSourceId || serviceName || uploadBatchId
+    query || (severity && severity !== "ALL") || serviceName || selectedSourceId
   );
 
   return (
-    <div className="page-container" style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-      {/* Page Header */}
+    <div
+      className="page-container"
+      style={{
+        padding: "var(--space-6)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-6)",
+      }}
+    >
       <PageHeader
         title="Logs Explorer"
-        subtitle="Search, filter, inspect, and analyze ingested logs across all registered sources and services."
+        description="FTS5 Full-Text Search, safe query language filters, distributed trace grouping, and exports."
         actions={
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={fetchLogs} title="Refresh Logs">
-              <RefreshCw size={14} /> Refresh
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setIsSavedModalOpen(true)}
+              style={{ gap: "6px" }}
+            >
+              <Bookmark size={14} /> Saved Searches ({savedSearches.length})
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setIsExportOpen(true)}
+              disabled={total === 0}
+              style={{ gap: "6px" }}
+            >
+              <Download size={14} /> Export
             </button>
             <button
               type="button"
               className="btn btn-primary btn-sm"
               onClick={() => setIsWizardOpen(true)}
+              style={{ gap: "6px" }}
             >
-              <UploadCloud size={14} /> Upload Logs
+              <UploadCloud size={14} /> Import File
             </button>
           </div>
         }
       />
 
-      {/* Active Batch Filter Banner */}
-      {uploadBatchId && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-2) var(--space-4)", backgroundColor: "var(--bg-elevated)", border: "1px solid var(--accent-primary)", borderRadius: "var(--radius-md)", fontSize: "var(--text-caption)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <Filter size={14} color="var(--accent-primary)" />
-            <span>Filtering records by Upload Batch ID: <strong className="code-font">{uploadBatchId}</strong></span>
-          </div>
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs"
-            onClick={() => {
-              setUploadBatchId("");
-              setSearchParams({});
-            }}
-          >
-            <X size={13} /> Clear Batch Filter
-          </button>
-        </div>
-      )}
-
-      {/* Search & Filter Toolbar */}
-      <div className="card" style={{ padding: "var(--space-4)" }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-3)", alignItems: "center" }}>
-          {/* Search Input */}
-          <div style={{ flex: "1 1 240px", minWidth: "220px", position: "relative" }}>
-            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
-            <input
-              type="text"
-              placeholder="Search messages, trace IDs, service names..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: "100%", height: "36px", paddingLeft: "34px", paddingRight: "var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-surface)", color: "var(--text-primary)", fontSize: "var(--text-caption)" }}
-            />
-          </div>
-
-          {/* Severity Filter */}
-          <div style={{ width: "130px" }}>
-            <select
-              value={severity}
-              onChange={(e) => {
-                setSeverity(e.target.value);
-                setPage(1);
-              }}
-              style={{ width: "100%", height: "36px", padding: "0 var(--space-2)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-surface)", color: "var(--text-primary)", fontSize: "var(--text-caption)" }}
-            >
-              <option value="ALL">All Severities</option>
-              <option value="CRITICAL">CRITICAL</option>
-              <option value="ERROR">ERROR</option>
-              <option value="WARNING">WARNING</option>
-              <option value="INFO">INFO</option>
-              <option value="DEBUG">DEBUG</option>
-            </select>
-          </div>
-
-          {/* Source Filter */}
-          <div style={{ width: "180px" }}>
-            <select
-              value={selectedSourceId}
-              onChange={(e) => {
-                setSelectedSourceId(e.target.value);
-                setPage(1);
-              }}
-              style={{ width: "100%", height: "36px", padding: "0 var(--space-2)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-surface)", color: "var(--text-primary)", fontSize: "var(--text-caption)" }}
-            >
-              <option value="">All Log Sources</option>
-              {sources.map((src) => (
-                <option key={src.id} value={src.id}>
-                  {src.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Service Filter */}
-          <div style={{ width: "150px" }}>
-            <input
-              type="text"
-              placeholder="Filter service..."
-              value={serviceName}
-              onChange={(e) => setServiceName(e.target.value)}
-              style={{ width: "100%", height: "36px", padding: "0 var(--space-2)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-surface)", color: "var(--text-primary)", fontSize: "var(--text-caption)", fontFamily: "var(--font-mono)" }}
-            />
-          </div>
-
-          {/* Submit Search Button */}
-          <button type="submit" className="btn btn-secondary btn-sm" style={{ height: "36px" }}>
-            <Search size={14} /> Search
-          </button>
-
-          {/* Clear Filters Button */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={handleClearFilters}
-              style={{ height: "36px" }}
-            >
-              <X size={14} /> Clear
-            </button>
-          )}
-        </form>
-      </div>
-
-      {error && (
-        <div style={{ padding: "var(--space-3)", backgroundColor: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", color: "var(--status-error)", fontSize: "var(--text-caption)" }}>
-          {error}
-        </div>
-      )}
-
-      {/* Main Logs Table */}
-      <div className="card">
-        <LogTable
-          logs={logs}
-          loading={isLoading}
-          emptyTitle="No log entries found"
-          emptyDescription={
-            hasActiveFilters
-              ? "No records matched your search query or filter criteria. Try broadening your filters."
-              : "No logs have been ingested yet. Click 'Upload Logs' to import a log file."
-          }
+      {/* Advanced Search Bar Component */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+        <AdvancedSearchBar
+          value={query}
+          onChange={setQuery}
+          onSearch={handleSearchSubmit}
+          suggestions={suggestions}
+          onOpenSaved={() => setIsSavedModalOpen(true)}
         />
 
-        {/* Pagination Footer */}
-        {total > 0 && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-3) var(--space-4)", borderTop: "1px solid var(--border-subtle)", fontSize: "var(--text-caption)" }}>
-            <div style={{ color: "var(--text-secondary)" }}>
-              Showing <span className="tabular-nums" style={{ fontWeight: 600, color: "var(--text-primary)" }}>{Math.min((page - 1) * pageSize + 1, total)}</span> to{" "}
-              <span className="tabular-nums" style={{ fontWeight: 600, color: "var(--text-primary)" }}>{Math.min(page * pageSize, total)}</span> of{" "}
-              <span className="tabular-nums" style={{ fontWeight: 600, color: "var(--text-primary)" }}>{total.toLocaleString()}</span> logs
+        {/* Structured Filter Row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "var(--space-3)",
+            backgroundColor: "var(--bg-card)",
+            padding: "var(--space-3) var(--space-4)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              <Filter size={14} color="var(--text-muted)" />
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>
+                Filters:
+              </span>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                <span style={{ color: "var(--text-muted)" }}>Per page:</span>
+            {/* Severity Pill Selector */}
+            <div style={{ display: "flex", gap: "4px" }}>
+              {["ALL", "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"].map((sev) => (
+                <button
+                  key={sev}
+                  type="button"
+                  onClick={() => {
+                    setSeverity(sev);
+                    setPage(1);
+                  }}
+                  className={`btn ${severity === sev ? "btn-primary" : "btn-secondary"} btn-xs`}
+                  style={{ fontSize: "11px", padding: "2px 8px" }}
+                >
+                  {sev}
+                </button>
+              ))}
+            </div>
+
+            {/* Service Filter */}
+            <input
+              type="text"
+              placeholder="Filter by service..."
+              value={serviceName}
+              onChange={(e) => {
+                setServiceName(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                padding: "4px 8px",
+                fontSize: "12px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border-subtle)",
+                backgroundColor: "var(--bg-elevated)",
+                color: "var(--text-primary)",
+                width: "160px",
+              }}
+            />
+
+            {/* Source Filter */}
+            {sources.length > 0 && (
+              <select
+                value={selectedSourceId}
+                onChange={(e) => {
+                  setSelectedSourceId(e.target.value);
+                  setPage(1);
+                }}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "var(--bg-elevated)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <option value="">All Sources</option>
+                {sources.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.service_name})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs"
+                onClick={handleClearFilters}
+                style={{ gap: "4px" }}
+              >
+                <X size={12} /> Clear Filters
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-secondary btn-xs"
+              onClick={fetchLogs}
+              title="Refresh search"
+            >
+              <RefreshCw size={12} className={isLoading ? "spinning" : ""} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Query Stats & FTS5 Status Strip */}
+      {stats && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontSize: "12px",
+            color: "var(--text-secondary)",
+            padding: "0 var(--space-2)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+            <span>
+              Found <strong style={{ color: "var(--text-primary)" }}>{total.toLocaleString()}</strong> records
+              in <strong style={{ color: "var(--accent-primary)" }}>{stats.query_duration_ms}ms</strong>
+            </span>
+            {stats.fts_enabled && (
+              <span className="badge badge-success" style={{ fontSize: "10px", gap: "4px", padding: "1px 6px" }}>
+                <Zap size={10} /> FTS5 Active
+              </span>
+            )}
+          </div>
+
+          {stats.matched_services && stats.matched_services.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ color: "var(--text-muted)" }}>Services:</span>
+              {stats.matched_services.slice(0, 4).map((s) => (
+                <span key={s} className="format-pill" style={{ fontSize: "10px" }}>
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="card" style={{ padding: "var(--space-4)", backgroundColor: "rgba(239, 68, 68, 0.1)", border: "1px solid var(--status-error)" }}>
+          <span style={{ color: "var(--status-error)", fontSize: "13px" }}>{error}</span>
+        </div>
+      )}
+
+      {/* Log Results Table */}
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <LogTable
+          logs={logs}
+          isLoading={isLoading}
+          onRowClick={(log) => setSelectedLog(log)}
+        />
+
+        {/* Pagination Bar */}
+        {total > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "var(--space-3) var(--space-4)",
+              backgroundColor: "var(--bg-elevated)",
+              borderTop: "1px solid var(--border-subtle)",
+              fontSize: "12px",
+            }}
+          >
+            <div style={{ color: "var(--text-muted)" }}>
+              Showing {((page - 1) * pageSize + 1).toLocaleString()} to{" "}
+              {Math.min(page * pageSize, total).toLocaleString()} of {total.toLocaleString()} records
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                <span>Page size:</span>
                 <select
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));
                     setPage(1);
                   }}
-                  style={{ height: "28px", padding: "0 var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-elevated)", color: "var(--text-primary)", fontSize: "var(--text-caption)" }}
+                  style={{
+                    padding: "2px 6px",
+                    fontSize: "11px",
+                    borderRadius: "var(--radius-sm)",
+                    backgroundColor: "var(--bg-card)",
+                    border: "1px solid var(--border-subtle)",
+                    color: "var(--text-primary)",
+                  }}
                 >
                   <option value={25}>25</option>
                   <option value={50}>50</option>
@@ -266,25 +461,25 @@ export default function LogExplorerPage() {
                 </select>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              <div style={{ display: "flex", gap: "var(--space-1)" }}>
                 <button
                   type="button"
                   className="btn btn-secondary btn-xs"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1 || isLoading}
+                  onClick={() => setPage((p) => p - 1)}
                 >
-                  <ChevronLeft size={14} /> Previous
+                  <ChevronLeft size={13} /> Prev
                 </button>
-                <span className="tabular-nums" style={{ color: "var(--text-primary)", fontWeight: 500 }}>
-                  Page {page} of {totalPages}
+                <span style={{ padding: "4px 8px", color: "var(--text-primary)", fontWeight: 600 }}>
+                  {page} / {totalPages}
                 </span>
                 <button
                   type="button"
                   className="btn btn-secondary btn-xs"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages || isLoading}
+                  onClick={() => setPage((p) => p + 1)}
                 >
-                  Next <ChevronRight size={14} />
+                  Next <ChevronRight size={13} />
                 </button>
               </div>
             </div>
@@ -292,20 +487,42 @@ export default function LogExplorerPage() {
         )}
       </div>
 
-      {/* Upload Wizard Modal */}
+      {/* Log Detail Slide-over Drawer */}
+      <LogDetailDrawer
+        log={selectedLog}
+        isOpen={Boolean(selectedLog)}
+        onClose={() => setSelectedLog(null)}
+      />
+
+      {/* Saved Searches Modal */}
+      <SavedSearchesModal
+        isOpen={isSavedModalOpen}
+        onClose={() => setIsSavedModalOpen(false)}
+        savedSearches={savedSearches}
+        onSelectSearch={(savedQuery) => {
+          setQuery(savedQuery);
+          setPage(1);
+        }}
+        onSaveCurrentQuery={handleSaveSearch}
+        onDeleteSearch={handleDeleteSavedSearch}
+        currentQuery={query}
+      />
+
+      {/* Export Dialog */}
+      <ExportDialog
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        onExport={handleExport}
+        totalRecords={total}
+      />
+
+      {/* File Upload Wizard */}
       <UploadWizard
         isOpen={isWizardOpen}
-        onClose={() => {
+        onClose={() => setIsWizardOpen(false)}
+        onUploadComplete={() => {
           setIsWizardOpen(false);
           fetchLogs();
-        }}
-        onIngestionComplete={() => {
-          fetchLogs();
-        }}
-        onExploreLogs={(batch) => {
-          setIsWizardOpen(false);
-          setUploadBatchId(batch.id);
-          setPage(1);
         }}
       />
     </div>

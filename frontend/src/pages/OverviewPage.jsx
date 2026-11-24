@@ -97,15 +97,18 @@ export default function OverviewPage() {
   const fetchData = useCallback(
     async (isManual = false) => {
       if (isManual) setRefreshing(true);
-      setError(null);
 
       if (abortRef.current) abortRef.current.abort();
       abortRef.current = new AbortController();
       const signal = abortRef.current.signal;
 
       try {
+        // Primary backend health & connectivity check
+        const statusRes = await getSystemStatus(signal);
+        setSystemStatus(statusRes);
+
+        // Fetch auxiliary telemetry and dashboard metrics in parallel
         const [
-          statusRes,
           capRes,
           summaryRes,
           activityRes,
@@ -113,7 +116,6 @@ export default function OverviewPage() {
           incidentsRes,
           sourcesRes,
         ] = await Promise.all([
-          getSystemStatus(signal),
           getSystemCapabilities(signal),
           getOverviewSummary(signal),
           getLogActivity(timeRange, signal),
@@ -122,7 +124,6 @@ export default function OverviewPage() {
           getSourceHealth(signal),
         ]);
 
-        setSystemStatus(statusRes);
         setCapabilities(capRes || {});
         setSummary(summaryRes || { total_logs: 0, error_logs: 0, warning_logs: 0, critical_logs: 0, active_incidents: 0, configured_sources: 0 });
         setActivity(activityRes || { points: [] });
@@ -130,6 +131,7 @@ export default function OverviewPage() {
         setRecentIncidents(incidentsRes || { incidents: [] });
         setSourceHealth(sourcesRes || { sources: [] });
         setLastRefreshed(new Date().toLocaleTimeString());
+        setError(null);
       } catch (err) {
         if (err.name !== "CanceledError" && err.name !== "AbortError") {
           setError(err);

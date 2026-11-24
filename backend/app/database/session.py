@@ -113,3 +113,8 @@ def init_db():
     import app.models  # Ensure all models are registered with Base.metadata
     Base.metadata.create_all(bind=engine)
     migrate_sqlite_columns()
+    try:
+        from app.services.fts_service import FTSService
+        FTSService.setup_fts_tables(engine)
+    except Exception:
+        pass

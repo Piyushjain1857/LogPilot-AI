@@ -10,6 +10,8 @@ from app.api.v1.endpoints import (
     ingest,
     source_tokens,
     streaming,
+    search,
+    traces,
 )
 
 api_router = APIRouter()
@@ -20,6 +22,8 @@ api_router.include_router(overview.router)
 api_router.include_router(settings.router)
 api_router.include_router(uploads.router)
 api_router.include_router(log_sources.router)
+api_router.include_router(search.router)
+api_router.include_router(traces.router)
 api_router.include_router(logs.router)
 api_router.include_router(ingest.router)
 api_router.include_router(source_tokens.router)

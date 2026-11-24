@@ -26,6 +26,7 @@ const NAVIGATION_GROUPS = [
       { path: "/app", label: "Overview", icon: LayoutDashboard, end: true },
       { path: "/app/live-logs", label: "Live Logs", icon: Radio, pulse: true },
       { path: "/app/log-explorer", label: "Log Explorer", icon: FileSearch },
+      { path: "/app/traces", label: "Trace Explorer", icon: GitBranch },
       { path: "/app/log-sources", label: "Log Sources", icon: Server },
     ],
   },

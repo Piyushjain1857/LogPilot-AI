@@ -10,6 +10,7 @@ from app.models.analysis import AnalysisRun
 from app.models.playbook import RemediationPlaybook
 from app.models.event import SystemEvent
 from app.models.preference import WorkspacePreference
+from app.models.saved_search import SavedSearch, SearchHistory
 
 __all__ = [
     "LogSource",
@@ -25,4 +26,6 @@ __all__ = [
     "RemediationPlaybook",
     "SystemEvent",
     "WorkspacePreference",
+    "SavedSearch",
+    "SearchHistory",
 ]

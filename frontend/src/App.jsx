@@ -10,6 +10,7 @@ import OverviewPage from "./pages/OverviewPage";
 import LiveLogsPage from "./pages/placeholders/LiveLogsPage";
 import LogSourcesPage from "./pages/placeholders/LogSourcesPage";
 import LogExplorerPage from "./pages/placeholders/LogExplorerPage";
+import TraceExplorerPage from "./pages/placeholders/TraceExplorerPage";
 import AnomaliesPage from "./pages/placeholders/AnomaliesPage";
 import IncidentsPage from "./pages/placeholders/IncidentsPage";
 import RootCausePage from "./pages/placeholders/RootCausePage";
@@ -41,6 +42,8 @@ export default function App() {
               <Route path="live-logs" element={<LiveLogsPage />} />
               <Route path="log-sources" element={<LogSourcesPage />} />
               <Route path="log-explorer" element={<LogExplorerPage />} />
+              <Route path="traces" element={<TraceExplorerPage />} />
+              <Route path="traces/:traceId" element={<TraceExplorerPage />} />
               <Route path="anomalies" element={<AnomaliesPage />} />
               <Route path="incidents" element={<IncidentsPage />} />
               <Route path="root-cause" element={<RootCausePage />} />
