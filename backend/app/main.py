@@ -1,0 +1,131 @@
+import time
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import JSONResponse
+
+from app.core.config import settings
+from app.core.logging import setup_logging, logger
+from app.database.session import init_db
+from app.middleware.request_id import RequestIDMiddleware
+from app.middleware.process_time import ProcessTimeMiddleware
+from app.middleware.security import SecurityHeadersMiddleware
+from app.api.v1.router import api_router
+from app.schemas.meta import MetaResponse
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup actions
+    setup_logging()
+    app.state.server_start_time = time.time()
+    logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} ({settings.APP_ENV})")
+    
+    # Initialize database tables
+    try:
+        init_db()
+        logger.info("Database schema verified and tables initialized.")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}", exc_info=True)
+    
+    yield
+    
+    # Shutdown actions
+    logger.info(f"Shutting down {settings.APP_NAME}")
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    description="AI-powered Logs Analyser and Troubleshooter Agent — Enterprise Observability Platform",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
+)
+
+# Middleware Pipeline (executed in reverse registration order)
+# 1. CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["*"],
+    expose_headers=["X-Request-ID", "X-Process-Time"],
+)
+
+# 2. Security Headers
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 3. Process Time Tracking
+app.add_middleware(ProcessTimeMiddleware)
+
+# 4. Request ID Tracing
+app.add_middleware(RequestIDMiddleware)
+
+
+# Centralized Exception Handlers
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    request_id = getattr(request.state, "request_id", None)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "request_id": request_id,
+            "status_code": exc.status_code,
+        },
+        headers={"X-Request-ID": request_id} if request_id else {},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    request_id = getattr(request.state, "request_id", None)
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": str(exc.errors()),
+            "request_id": request_id,
+            "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
+        },
+        headers={"X-Request-ID": request_id} if request_id else {},
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", None)
+    logger.error(f"Unhandled server error [Request-ID: {request_id}]: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "detail": "An internal server error occurred.",
+            "request_id": request_id,
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+        },
+        headers={"X-Request-ID": request_id} if request_id else {},
+    )
+
+
+# Root Metadata Endpoint
+@app.get(
+    "/",
+    response_model=MetaResponse,
+    tags=["Root"],
+    summary="Application Identity & Metadata",
+)
+def get_root():
+    """Return application name, version, and description."""
+    return MetaResponse(
+        name=settings.APP_NAME,
+        version=settings.APP_VERSION,
+        description="AI-powered Logs Analyser and Troubleshooter Agent",
+    )
+
+
+# Include Versioned API Routes
+app.include_router(api_router, prefix="/api/v1")
