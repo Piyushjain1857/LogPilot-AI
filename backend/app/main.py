@@ -1,3 +1,11 @@
+import sys
+from pathlib import Path
+
+# Ensure 'backend' directory is in Python path for direct script execution
+_backend_dir = str(Path(__file__).resolve().parent.parent)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
@@ -206,4 +214,9 @@ if _frontend_dist:
         if os.path.exists(index_path):
             return FileResponse(index_path)
         raise StarletteHTTPException(status_code=404, detail="SPA index not found")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
 
