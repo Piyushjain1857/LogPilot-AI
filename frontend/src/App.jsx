@@ -16,6 +16,7 @@ import ClusterExplorerPage from "./pages/placeholders/ClusterExplorerPage";
 import IncidentsPage from "./pages/placeholders/IncidentsPage";
 import RootCausePage from "./pages/placeholders/RootCausePage";
 import TroubleshooterPage from "./pages/placeholders/TroubleshooterPage";
+import AIAssistantPage from "./pages/placeholders/AIAssistantPage";
 import RemediationPage from "./pages/placeholders/RemediationPage";
 import ReportsPage from "./pages/placeholders/ReportsPage";
 import SettingsPage from "./pages/placeholders/SettingsPage";
@@ -50,6 +51,7 @@ export default function App() {
               <Route path="incidents" element={<IncidentsPage />} />
               <Route path="root-cause" element={<RootCausePage />} />
               <Route path="troubleshooter" element={<TroubleshooterPage />} />
+              <Route path="assistant" element={<AIAssistantPage />} />
               <Route path="remediation" element={<RemediationPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="settings" element={<SettingsPage />} />

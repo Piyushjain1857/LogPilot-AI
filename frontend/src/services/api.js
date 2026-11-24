@@ -164,5 +164,7 @@ export const updatePreferences = async (data, signal) => {
 export { uploadService } from "./uploadService";
 export { logSourceService } from "./logSourceService";
 export { logService } from "./logService";
+export { reportService } from "./reportService";
+export { assistantService } from "./assistantService";
 
 export default apiClient;
