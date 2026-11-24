@@ -16,7 +16,7 @@ import * as logServiceModule from "../services/logService";
 
 describe("Phase 3: Log Ingestion UI Components", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("FileDropzone renders upload prompt and supported format pills", () => {
@@ -146,7 +146,7 @@ describe("Phase 3: Log Ingestion UI Components", () => {
 
 describe("Phase 3: Log Sources and Explorer Pages", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("LogSourcesPage loads sources and displays telemetry KPIs", async () => {

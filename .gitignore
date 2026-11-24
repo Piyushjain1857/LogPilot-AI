@@ -55,6 +55,7 @@ backend/storage/reports/*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.checkpoints/
 
 # Allow explicitly labelled synthetic sample datasets in sample-data/
 !sample-data/**

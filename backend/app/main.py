@@ -29,6 +29,11 @@ async def lifespan(app: FastAPI):
         logger.info("Database schema verified and tables initialized.")
         from app.ingestion.ingestion_manager import IngestionManager
         IngestionManager.recover_interrupted_jobs()
+
+        # Start real-time ingestion worker if enabled
+        if settings.ENABLE_REALTIME_INGESTION:
+            from app.ingestion.ingestion_worker import ingestion_worker
+            ingestion_worker.start()
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}", exc_info=True)
     
@@ -36,6 +41,17 @@ async def lifespan(app: FastAPI):
     
     # Shutdown actions
     logger.info(f"Shutting down {settings.APP_NAME}")
+    if settings.ENABLE_REALTIME_INGESTION:
+        try:
+            from app.ingestion.ingestion_worker import ingestion_worker
+            await ingestion_worker.stop()
+        except Exception as e:
+            logger.warning(f"Error stopping ingestion worker: {e}")
+    try:
+        from app.websocket.manager import ws_manager
+        await ws_manager.close_all()
+    except Exception as e:
+        logger.warning(f"Error closing WebSocket connections: {e}")
 
 
 app = FastAPI(
@@ -131,3 +147,30 @@ def get_root():
 
 # Include Versioned API Routes
 app.include_router(api_router, prefix="/api/v1")
+
+
+# WebSocket Real-Time Log Streaming Endpoint
+from starlette.websockets import WebSocket, WebSocketDisconnect
+from app.websocket.manager import ws_manager
+
+
+@app.websocket("/ws/v1/logs")
+async def websocket_logs_endpoint(websocket: WebSocket):
+    """
+    Real-time log streaming WebSocket endpoint.
+    Supports subscriptions, heartbeat pings, and delivery of committed log events.
+    """
+    client_id = await ws_manager.connect(websocket)
+    if not client_id:
+        return
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await ws_manager.handle_client_message(client_id, data)
+    except WebSocketDisconnect:
+        await ws_manager.disconnect(client_id)
+    except Exception as e:
+        logger.debug(f"WebSocket client loop ended for {client_id}: {e}")
+        await ws_manager.disconnect(client_id)
+

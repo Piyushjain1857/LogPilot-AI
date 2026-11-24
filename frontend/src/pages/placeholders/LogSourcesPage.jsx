@@ -8,6 +8,10 @@ import {
   UploadWizard,
   LogSourceModal,
   UploadErrorDrawer,
+  TokenCreationDialog,
+  TokenManagementModal,
+  IntegrationGuideModal,
+  SourceSetupWizard,
 } from "../../components/ingestion";
 import { logSourceService } from "../../services/logSourceService";
 import { uploadService } from "../../services/uploadService";
@@ -30,6 +34,12 @@ export default function LogSourcesPage() {
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const [editingSource, setEditingSource] = useState(null);
   const [errorDrawerBatch, setErrorDrawerBatch] = useState(null);
+
+  // Phase 5 Streaming & Token Modals state
+  const [isSetupWizardOpen, setIsSetupWizardOpen] = useState(false);
+  const [tokenModalSource, setTokenModalSource] = useState(null);
+  const [guideModalSource, setGuideModalSource] = useState(null);
+  const [createdTokenState, setCreatedTokenState] = useState(null); // { tokenData, sourceName }
 
   const fetchSources = useCallback(async () => {
     setIsLoadingSources(true);
@@ -116,10 +126,7 @@ export default function LogSourcesPage() {
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => {
-                setEditingSource(null);
-                setIsSourceModalOpen(true);
-              }}
+              onClick={() => setIsSetupWizardOpen(true)}
             >
               <Plus size={14} /> Add Source
             </button>
@@ -217,6 +224,8 @@ export default function LogSourcesPage() {
               isLoading={isLoadingSources}
               onUploadForSource={handleUploadForSource}
               onEditSource={handleEditSource}
+              onManageTokens={(src) => setTokenModalSource(src)}
+              onViewGuide={(src) => setGuideModalSource(src)}
             />
           )}
 
@@ -271,6 +280,43 @@ export default function LogSourcesPage() {
         onClose={() => setErrorDrawerBatch(null)}
         batchId={errorDrawerBatch?.id}
         filename={errorDrawerBatch?.original_filename}
+      />
+
+      {/* Phase 5: Source Setup Wizard */}
+      <SourceSetupWizard
+        isOpen={isSetupWizardOpen}
+        onClose={() => setIsSetupWizardOpen(false)}
+        onSourceCreated={() => {
+          fetchSources();
+        }}
+        onTokenGenerated={(tokenData, sourceName) => {
+          setCreatedTokenState({ tokenData, sourceName });
+        }}
+      />
+
+      {/* Phase 5: Token Management Modal */}
+      <TokenManagementModal
+        isOpen={Boolean(tokenModalSource)}
+        onClose={() => setTokenModalSource(null)}
+        source={tokenModalSource}
+        onTokenGenerated={(tokenData, sourceName) => {
+          setCreatedTokenState({ tokenData, sourceName });
+        }}
+      />
+
+      {/* Phase 5: Integration Guide Modal */}
+      <IntegrationGuideModal
+        isOpen={Boolean(guideModalSource)}
+        onClose={() => setGuideModalSource(null)}
+        source={guideModalSource}
+      />
+
+      {/* Phase 5: Token Creation Dialog (Shown once upon generation) */}
+      <TokenCreationDialog
+        isOpen={Boolean(createdTokenState)}
+        onClose={() => setCreatedTokenState(null)}
+        tokenData={createdTokenState?.tokenData}
+        sourceName={createdTokenState?.sourceName}
       />
     </div>
   );

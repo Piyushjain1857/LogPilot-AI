@@ -41,15 +41,17 @@ Modern cloud architectures and distributed microservices produce massive volumes
 - **Rich Telemetry Components:** Virtualized LogTable with trace copying, expandable diagnostic accordion, and status badges.
 - **Workspace Preferences:** Backend-synchronized settings for theme, density (comfortable/compact), timezone, and auto-refresh intervals.
 
-### Phase 3: Complete Log File Ingestion System (Completed)
-- **Multi-Format Ingestion:** Native streaming parsing for `.log`, `.txt` (multiline stack traces), `.csv` (auto/manual mapping), `.json` (objects, arrays, wrappers), `.jsonl` / `.ndjson`.
-- **Pre-Ingestion Security:** Path traversal sanitization, binary null-byte rejection, 25MB file size limit enforcement, UTF-8/BOM encoding handling.
-- **SHA-256 Deduplication:** Cryptographic fingerprinting prevents accidental re-ingestion without explicit user confirmation.
-- **Automated Secret Redaction:** Inline regex engine masks Bearer tokens, JWTs, API keys, passwords, database URLs, and private keys prior to database persistence and previewing.
-- **Async Concurrency:** Bounded `ThreadPoolExecutor` worker pool, SQLite WAL mode concurrency, 500-record batch chunking, cooperative job cancellation.
-- **4-Step Upload Wizard:** Select Files → Configure Source → Preview & Mapping → Confirm & Import, featuring real-time client upload progress & backend ingestion polling.
-- **Upgraded Observability Pages:** Real, backend-driven `LogSourcesPage` with telemetry KPIs and `LogExplorerPage` with server-side pagination, full-text search, and severity filters.
-- **Comprehensive Quality:** 47 Pytest backend tests and 27 Vitest frontend tests passing with 0 lint errors. Detailed documentation in `docs/LOG_INGESTION.md`, `docs/LOG_FORMATS.md`, and `docs/DATA_SECURITY.md`.
+### Phase 5: Real-Time Log Streaming & Live Monitoring (Completed)
+- **High-Throughput Ingestion REST API:** Single log (`POST /api/v1/ingest/logs`) and bulk batch ingestion (`POST /api/v1/ingest/batch`) with Bearer token authentication and sliding-window rate limiting.
+- **Cryptographic Ingestion Tokens:** SHA-256 hashed storage, constant-time `hmac.compare_digest` verification, zero-downtime rotation, instant revocation, and one-time display modal.
+- **Asynchronous Ingestion Pipeline:** Bounded 5,000-record `asyncio.Queue` with HTTP 429 backpressure protection, thread-pool SQLite commits, Drain3 template mining, and recursive sensitive data redaction.
+- **Idempotency & Sequence Cursor Replay:** Unique constraint on `(source_id, external_event_id)` and monotonic autoincrement `sequence_id` for gapless replay catchup (`GET /api/v1/stream/events`).
+- **Real-Time WebSocket Gateway:** Subscription filtering (`ws://127.0.0.1:8000/ws/v1/logs`), heartbeat keep-alive, client connection management, and per-client bounded queues.
+- **Terminal-Style Live Logs Console:** High-density live monitoring page (`/app/live-logs`) with 2,000-log ring buffer, 150ms batch flushing, pause/resume buffering, auto-scroll, text filtering, severity toggles, and expandable metadata inspection.
+- **Source Token & Integration Management:** Multi-step Source Setup Wizard, token management modal, and copyable integration guides for cURL, Python, Node.js, Collection Agent, and Simulator.
+- **Standalone Python Collection Agent:** Inode-aware file tailer (`agents/python/`) with truncation detection, atomic checkpoint persistence, and exponential backoff retry client.
+- **Synthetic Microservice Simulator:** Scenario generator (`simulators/`) simulating 5 production failure profiles (Normal, DB Failure, Deployment Regression, Traffic Spike, Recovery).
+- **100% Test Passing & Zero Lint Errors:** 59 Pytest backend tests and 40 Vitest frontend tests passing. Six dedicated technical guides in `docs/`.
 
 ---
 
@@ -136,6 +138,12 @@ LogPilot-AI/
 │   │   └── reports/              # Exported audit reports
 │   ├── .env.example              # Backend environment template
 │   └── requirements.txt          # Python dependencies
+├── agents/                       # Log collection agents
+│   └── python/                   # Lightweight Python tailer & batch streamer
+├── simulators/                   # Synthetic microservice simulator
+│   ├── microservice_simulator.py # CLI simulation runner
+│   ├── scenarios.py              # Operational scenario definitions (A - E)
+│   └── log_generator.py          # Correlated distributed trace generator
 ├── sample-data/                  # Synthetic benchmark logs
 │   ├── synthetic_logs.log        # Plain text logs
 │   ├── synthetic_logs.jsonl      # JSON Lines logs
@@ -144,6 +152,16 @@ LogPilot-AI/
 ├── docs/                         # Technical documentation
 │   ├── ARCHITECTURE.md           # System design & pipeline
 │   ├── API_DOCUMENTATION.md      # OpenAPI specification reference
+│   ├── REALTIME_STREAMING.md     # Real-time streaming architecture & queue
+│   ├── INGESTION_API.md          # REST Ingestion API specification
+│   ├── WEBSOCKET_PROTOCOL.md     # WebSocket protocol & message types
+│   ├── COLLECTION_AGENT.md       # Python log collection agent guide
+│   ├── SIMULATOR_GUIDE.md        # Microservice simulator scenarios & CLI
+│   ├── STREAMING_SECURITY.md     # Ingestion security & token lifecycle
+│   ├── DESIGN_SYSTEM.md          # Design tokens & UI components
+│   ├── LOG_INGESTION.md          # File ingestion engine architecture
+│   ├── LOG_FORMATS.md            # Multi-format log specification
+│   ├── DATA_SECURITY.md          # PII & credential redaction rules
 │   └── DEVELOPMENT.md            # Developer setup guide
 ├── scripts/                      # Developer tooling scripts
 │   ├── setup.sh                  # One-click environment installer
@@ -174,19 +192,31 @@ Open your browser to:
 - **Frontend App:** [http://localhost:5173](http://localhost:5173)
 - **Backend API:** [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - **Interactive Swagger Docs:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **Live Logs Console:** [http://localhost:5173/app/live-logs](http://localhost:5173/app/live-logs)
+
+### 4. Run Python Log Collection Agent
+```bash
+cd agents/python
+python logpilot_agent.py --token "<INGESTION_TOKEN>" --file "/path/to/app.log" --service "payment-service"
+```
+
+### 5. Run Synthetic Microservice Simulator
+```bash
+python simulators/microservice_simulator.py --token "<INGESTION_TOKEN>" --scenario B --rate 20 --duration 60
+```
 
 ---
 
 ## Testing
 
-Run backend tests:
+Run backend tests (59 tests):
 ```bash
 cd backend
 source .venv/bin/activate
 python -m pytest -v
 ```
 
-Run frontend tests, linting, and build:
+Run frontend tests (40 tests), linting, and build:
 ```bash
 cd frontend
 npm run lint
@@ -199,17 +229,18 @@ npm run build
 ## Security Foundation
 
 - **Zero Secret Exposure:** Frontend never receives or stores Gemini API keys.
-- **Data Redaction:** Built-in regex sanitization strips Bearer tokens, private keys, passwords, and API secrets.
+- **Source Ingestion Tokens:** High-entropy tokens hashed with SHA-256 and verified using constant-time comparison.
+- **Automated Data Redaction:** Built-in regex engine strips Bearer tokens, private keys, passwords, database URLs, and API secrets before persistence and broadcasting.
+- **Backpressure & Rate Limiting:** Bounded queues and sliding-window rate limiters prevent denial-of-service and memory exhaustion.
 - **Safe Execution Boundary:** Remediation command execution is disabled by default (`ENABLE_REMEDIATION_EXECUTION=false`).
 - **Untrusted Input Handling:** Logs are treated as arbitrary text without shell evaluation.
-- **Security Notice:** Authentication and role-based access control are not yet implemented; this Phase 1 foundation is designed for local development and benchmarking. High-throughput production deployments would replace SQLite with TimescaleDB / ClickHouse and an external message queue.
 
 ---
 
 ## Roadmap
 
 - **Phase 1 (Complete):** Monorepo architecture, database models, core API, dark AIOps design system, overview dashboard.
-- **Phase 2:** Drain3 log template parsing, high-throughput file ingestion, and statistical anomaly detection.
-- **Phase 3:** Error clustering engine and distributed trace correlation.
-- **Phase 4:** Gemini AI agent root cause diagnosis and playbook generator with human-in-the-loop validation.
-- **Phase 5:** Production readiness, performance benchmarking, and live telemetry streaming.
+- **Phase 2 (Complete):** Premium AIOps UI, Design System, application shell, Command Palette, timeseries charts, and theme engine.
+- **Phase 3 (Complete):** High-throughput log file ingestion engine, multi-format parsers, SHA-256 deduplication, and sensitive data redaction.
+- **Phase 4 (Pending):** Error clustering engine, Drain3 template trees, distributed trace correlation, and graph analysis.
+- **Phase 5 (Complete):** Real-time log streaming, WebSocket gateway, Python collection agent, microservice simulator, and live console terminal.

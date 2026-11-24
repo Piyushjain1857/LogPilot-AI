@@ -4,6 +4,7 @@ import AppShell from "./components/layout/AppShell";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import { ThemeProvider } from "./context/ThemeContext";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
+import { StreamingProvider } from "./context/StreamingContext";
 import LandingPage from "./pages/LandingPage";
 import OverviewPage from "./pages/OverviewPage";
 import LiveLogsPage from "./pages/placeholders/LiveLogsPage";
@@ -28,7 +29,14 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
 
             {/* Console Application Shell */}
-            <Route path="/app" element={<AppShell />}>
+            <Route
+              path="/app"
+              element={
+                <StreamingProvider>
+                  <AppShell />
+                </StreamingProvider>
+              }
+            >
               <Route index element={<OverviewPage />} />
               <Route path="live-logs" element={<LiveLogsPage />} />
               <Route path="log-sources" element={<LogSourcesPage />} />

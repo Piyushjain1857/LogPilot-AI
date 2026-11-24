@@ -1,0 +1,16 @@
+{
+  "server_url": "http://127.0.0.1:8000",
+  "token_env": "LOGPILOT_INGESTION_TOKEN",
+  "service_name": "payment-service",
+  "files": [
+    {
+      "path": "./sample-data/application.log",
+      "format": "auto",
+      "start_position": "end"
+    }
+  ],
+  "batch_size": 50,
+  "flush_interval_seconds": 2,
+  "max_retry_delay_seconds": 30,
+  "checkpoint_file": "./.logpilot-checkpoint.json"
+}

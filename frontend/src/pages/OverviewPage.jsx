@@ -10,6 +10,7 @@ import {
   Cpu,
   Plus,
   UploadCloud,
+  ArrowRight,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -36,6 +37,7 @@ import EmptyState from "../components/common/EmptyState";
 import ErrorMessage from "../components/common/ErrorMessage";
 import DateRangeSelector from "../components/common/DateRangeSelector";
 import { useWorkspace } from "../context/WorkspaceContext";
+import { useStreaming } from "../context/StreamingContext";
 import {
   getSystemStatus,
   getSystemCapabilities,
@@ -56,6 +58,18 @@ const SEVERITY_BAR_COLORS = {
 
 export default function OverviewPage() {
   const { autoRefreshEnabled, autoRefreshInterval } = useWorkspace();
+
+  let streamingState = {
+    connectionStatus: "DISCONNECTED",
+    streamMetrics: { logsPerSecond: 0, errorsPerMinute: 0, queueDepth: 0, activeSources: 0 },
+    totalSessionEvents: 0,
+  };
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    streamingState = useStreaming();
+  } catch (_) {
+    // Graceful fallback when rendered outside StreamingProvider in isolated component tests
+  }
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -205,6 +219,74 @@ export default function OverviewPage() {
           requestId={error.requestId}
         />
       )}
+
+      {/* Real-Time Ingestion & Streaming Section (Phase 5) */}
+      <div
+        className="card"
+        style={{
+          padding: "var(--space-3) var(--space-4)",
+          backgroundColor: "var(--bg-card)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "var(--space-3)",
+          borderLeft: `4px solid ${
+            streamingState.connectionStatus === "CONNECTED"
+              ? "var(--status-success)"
+              : "var(--border-subtle)"
+          }`,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span
+              className={
+                streamingState.connectionStatus === "CONNECTED" ? "pulse-dot" : ""
+              }
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                backgroundColor:
+                  streamingState.connectionStatus === "CONNECTED"
+                    ? "var(--status-success)"
+                    : "var(--text-muted)",
+              }}
+            />
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)" }}>
+              {streamingState.connectionStatus === "CONNECTED" ? "LIVE STREAM ACTIVE" : "STREAMING OFFLINE"}
+            </span>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "var(--text-secondary)", display: "flex", gap: "var(--space-4)" }}>
+            <span>
+              Throughput:{" "}
+              <strong style={{ color: "var(--accent-primary)" }}>
+                {(streamingState.streamMetrics?.logsPerSecond || 0).toFixed(1)} logs/s
+              </strong>
+            </span>
+            <span>
+              Queue Depth:{" "}
+              <strong style={{ color: "var(--status-warning)" }}>
+                {streamingState.streamMetrics?.queueDepth || 0} / 5,000
+              </strong>
+            </span>
+            <span>
+              Active Sources:{" "}
+              <strong style={{ color: "var(--text-primary)" }}>
+                {streamingState.streamMetrics?.activeSources || 0}
+              </strong>
+            </span>
+          </div>
+        </div>
+
+        <Link to="/app/live-logs">
+          <Button variant="secondary" size="xs" icon={ArrowRight}>
+            Open Live Console
+          </Button>
+        </Link>
+      </div>
 
       {/* Primary KPI Metrics Grid */}
       <div className="metrics-grid">

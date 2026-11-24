@@ -35,6 +35,26 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     ENABLE_REMEDIATION_EXECUTION: bool = False
 
+    # Real-Time Ingestion and Streaming Configuration (Phase 5)
+    ENABLE_REALTIME_INGESTION: bool = True
+    ENABLE_WEBSOCKET_STREAMING: bool = True
+    MAX_INGESTION_BATCH_SIZE: int = 500
+    MAX_INGESTION_REQUEST_BYTES: int = 2097152  # 2 MB
+    MAX_INGESTION_QUEUE_SIZE: int = 5000
+    INGESTION_WORKER_COUNT: int = 1
+    INGESTION_FLUSH_INTERVAL_MS: int = 250
+    INGESTION_REQUESTS_PER_MINUTE: int = 120
+    INGESTION_RECORDS_PER_MINUTE: int = 10000
+    MAX_WEBSOCKET_CLIENTS: int = 20
+    MAX_WEBSOCKET_CLIENT_QUEUE: int = 500
+    MAX_WEBSOCKET_MESSAGE_BYTES: int = 16384
+    WEBSOCKET_HEARTBEAT_INTERVAL: int = 20
+    WEBSOCKET_CONNECTION_TIMEOUT: int = 60
+    STREAM_EVENT_RETENTION_HOURS: int = 24
+    SOURCE_ACTIVE_WINDOW_SECONDS: int = 60
+    SOURCE_IDLE_WINDOW_SECONDS: int = 300
+    STREAM_METRICS_WINDOW_SECONDS: int = 300
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

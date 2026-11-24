@@ -1,21 +1,38 @@
 import React from "react";
-import { Server, Database, Radio, UploadCloud, Edit } from "lucide-react";
+import { Server, Database, Radio, UploadCloud, Edit, Key, Code, Cpu } from "lucide-react";
 
 export default function LogSourceTable({
   sources = [],
   isLoading = false,
   onUploadForSource,
   onEditSource,
+  onManageTokens,
+  onViewGuide,
 }) {
   const getSourceIcon = (type) => {
-    switch (type) {
-      case "api":
-        return <Radio size={16} color="var(--accent-secondary)" />;
-      case "agent":
-        return <Server size={16} color="var(--accent-primary)" />;
-      default:
-        return <Database size={16} color="var(--accent-primary)" />;
+    const t = (type || "").toLowerCase();
+    if (t.includes("api") || t.includes("rest")) {
+      return <Radio size={16} color="var(--accent-secondary)" />;
     }
+    if (t.includes("agent")) {
+      return <Server size={16} color="var(--accent-primary)" />;
+    }
+    if (t.includes("sim")) {
+      return <Cpu size={16} color="var(--status-warning)" />;
+    }
+    return <Database size={16} color="var(--accent-primary)" />;
+  };
+
+  const renderConnectionBadge = (status, enabled) => {
+    if (enabled === false) {
+      return <span className="badge badge-error">DISABLED</span>;
+    }
+    const s = (status || "UNKNOWN").toUpperCase();
+    if (s === "ACTIVE") return <span className="badge badge-success">ACTIVE</span>;
+    if (s === "IDLE") return <span className="badge badge-neutral">IDLE</span>;
+    if (s === "DEGRADED") return <span className="badge badge-warning">DEGRADED</span>;
+    if (s === "OFFLINE") return <span className="badge badge-neutral">OFFLINE</span>;
+    return <span className="badge badge-neutral">{s}</span>;
   };
 
   if (isLoading) {
@@ -41,10 +58,10 @@ export default function LogSourceTable({
           <tr style={{ backgroundColor: "var(--bg-elevated)", borderBottom: "1px solid var(--border-subtle)" }}>
             <th style={{ padding: "var(--space-2) var(--space-3)" }}>Source Name</th>
             <th style={{ padding: "var(--space-2) var(--space-3)", width: "160px" }}>Service Slug</th>
-            <th style={{ padding: "var(--space-2) var(--space-3)", width: "100px" }}>Type</th>
-            <th style={{ padding: "var(--space-2) var(--space-3)", width: "90px" }}>Status</th>
+            <th style={{ padding: "var(--space-2) var(--space-3)", width: "110px" }}>Type</th>
+            <th style={{ padding: "var(--space-2) var(--space-3)", width: "100px" }}>Health</th>
             <th style={{ padding: "var(--space-2) var(--space-3)", width: "160px" }}>Last Ingested</th>
-            <th style={{ padding: "var(--space-2) var(--space-3)", width: "130px", textAlign: "right" }}>Actions</th>
+            <th style={{ padding: "var(--space-2) var(--space-3)", width: "180px", textAlign: "right" }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -73,17 +90,35 @@ export default function LogSourceTable({
                 <span className="format-pill">{src.source_type?.toUpperCase() || "FILE"}</span>
               </td>
               <td style={{ padding: "var(--space-2) var(--space-3)" }}>
-                {src.is_active ? (
-                  <span className="badge badge-success">Active</span>
-                ) : (
-                  <span className="badge badge-neutral">Inactive</span>
-                )}
+                {renderConnectionBadge(src.connection_status, src.ingestion_enabled)}
               </td>
               <td style={{ padding: "var(--space-2) var(--space-3)", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>
                 {src.last_ingested_at ? new Date(src.last_ingested_at).toLocaleString() : "Never"}
               </td>
               <td style={{ padding: "var(--space-2) var(--space-3)", textAlign: "right" }}>
                 <div style={{ display: "inline-flex", gap: "4px" }}>
+                  {onViewGuide && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      onClick={() => onViewGuide(src)}
+                      title="Integration Guide & Code Snippets"
+                      style={{ gap: "4px" }}
+                    >
+                      <Code size={13} />
+                    </button>
+                  )}
+                  {onManageTokens && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      onClick={() => onManageTokens(src)}
+                      title="Manage Ingestion Tokens"
+                      style={{ gap: "4px" }}
+                    >
+                      <Key size={13} />
+                    </button>
+                  )}
                   {onEditSource && (
                     <button
                       type="button"

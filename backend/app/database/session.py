@@ -62,6 +62,25 @@ def migrate_sqlite_columns():
                 conn.exec_driver_sql("ALTER TABLE log_entries ADD COLUMN line_number INTEGER")
             if "parsing_status" not in cols:
                 conn.exec_driver_sql("ALTER TABLE log_entries ADD COLUMN parsing_status VARCHAR(32) DEFAULT 'SUCCESS'")
+            if "ingestion_batch_id" not in cols:
+                conn.exec_driver_sql("ALTER TABLE log_entries ADD COLUMN ingestion_batch_id VARCHAR(36)")
+            if "external_event_id" not in cols:
+                conn.exec_driver_sql("ALTER TABLE log_entries ADD COLUMN external_event_id VARCHAR(128)")
+            if "ingestion_method" not in cols:
+                conn.exec_driver_sql("ALTER TABLE log_entries ADD COLUMN ingestion_method VARCHAR(32) DEFAULT 'FILE_UPLOAD'")
+            if "received_at" not in cols:
+                conn.exec_driver_sql("ALTER TABLE log_entries ADD COLUMN received_at DATETIME")
+            if "persisted_at" not in cols:
+                conn.exec_driver_sql("ALTER TABLE log_entries ADD COLUMN persisted_at DATETIME")
+            
+            # Idempotent unique partial index for source_id + external_event_id
+            try:
+                conn.exec_driver_sql(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_log_entries_source_external_event "
+                    "ON log_entries(source_id, external_event_id) WHERE external_event_id IS NOT NULL"
+                )
+            except Exception:
+                pass
             conn.commit()
 
         # Check log_sources columns
@@ -72,6 +91,20 @@ def migrate_sqlite_columns():
                 conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN description TEXT")
             if "last_ingested_at" not in src_cols:
                 conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN last_ingested_at DATETIME")
+            if "connection_status" not in src_cols:
+                conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN connection_status VARCHAR(32) DEFAULT 'UNKNOWN'")
+            if "last_seen_at" not in src_cols:
+                conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN last_seen_at DATETIME")
+            if "last_error_at" not in src_cols:
+                conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN last_error_at DATETIME")
+            if "last_error_message" not in src_cols:
+                conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN last_error_message TEXT")
+            if "ingestion_enabled" not in src_cols:
+                conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN ingestion_enabled BOOLEAN DEFAULT 1")
+            if "total_ingested_records" not in src_cols:
+                conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN total_ingested_records INTEGER DEFAULT 0")
+            if "total_failed_records" not in src_cols:
+                conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN total_failed_records INTEGER DEFAULT 0")
             conn.commit()
 
 
