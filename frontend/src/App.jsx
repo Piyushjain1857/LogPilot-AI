@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -24,8 +24,10 @@ import SettingsPage from "./pages/placeholders/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
+  const location = useLocation();
+
   return (
-    <ErrorBoundary>
+    <ErrorBoundary resetKey={location.pathname}>
       <ThemeProvider>
         <WorkspaceProvider>
           <Routes>

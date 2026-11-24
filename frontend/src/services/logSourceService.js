@@ -17,7 +17,19 @@ export const logSourceService = {
    */
   async listSources(signal) {
     const response = await apiClient.get("/log-sources", { signal });
-    return response.data;
+    const data = response.data;
+    if (data && Array.isArray(data.items)) {
+      return data.items;
+    }
+    return Array.isArray(data) ? data : [];
+  },
+
+  /**
+   * Alias for listSources
+   * @param {AbortSignal} signal
+   */
+  async getSources(signal) {
+    return this.listSources(signal);
   },
 
   /**

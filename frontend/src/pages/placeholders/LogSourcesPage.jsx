@@ -45,10 +45,12 @@ export default function LogSourcesPage() {
     setIsLoadingSources(true);
     try {
       const data = await logSourceService.listSources();
-      setSources(data || []);
+      const list = Array.isArray(data) ? data : (data?.items || []);
+      setSources(list);
       setError(null);
     } catch (err) {
       setError(err.details || err.message || "Failed to load log sources.");
+      setSources([]);
     } finally {
       setIsLoadingSources(false);
     }
@@ -58,9 +60,11 @@ export default function LogSourcesPage() {
     setIsLoadingBatches(true);
     try {
       const data = await uploadService.listBatches({ limit: 50 });
-      setBatches(data || []);
+      const list = Array.isArray(data) ? data : (data?.items || []);
+      setBatches(list);
     } catch (err) {
       console.error("Failed to load upload batches:", err);
+      setBatches([]);
     } finally {
       setIsLoadingBatches(false);
     }
@@ -75,10 +79,12 @@ export default function LogSourcesPage() {
     refreshAll();
   }, [refreshAll]);
 
-  // Aggregate metrics
-  const totalIngestedRecords = batches.reduce((sum, b) => sum + (b.successful_records || 0), 0);
-  const totalRedactedSecrets = batches.reduce((sum, b) => sum + (b.redacted_records || 0), 0);
-  const activeBatchesCount = batches.filter((b) => b.status === "PROCESSING" || b.status === "PENDING").length;
+  // Aggregate metrics (safely guarded against non-array payloads)
+  const safeSources = Array.isArray(sources) ? sources : (sources?.items || []);
+  const safeBatches = Array.isArray(batches) ? batches : (batches?.items || []);
+  const totalIngestedRecords = safeBatches.reduce((sum, b) => sum + (b.successful_records || 0), 0);
+  const totalRedactedSecrets = safeBatches.reduce((sum, b) => sum + (b.redacted_records || 0), 0);
+  const activeBatchesCount = safeBatches.filter((b) => b.status === "PROCESSING" || b.status === "PENDING").length;
 
   const handleUploadForSource = (source) => {
     setWizardSourceId(source.id);
@@ -108,8 +114,8 @@ export default function LogSourcesPage() {
   };
 
   const tabsConfig = [
-    { id: "sources", label: `Configured Sources (${sources.length})` },
-    { id: "history", label: `Upload Batches (${batches.length})` },
+    { id: "sources", label: `Configured Sources (${safeSources.length})` },
+    { id: "history", label: `Upload Batches (${safeBatches.length})` },
   ];
 
   return (
@@ -154,7 +160,7 @@ export default function LogSourcesPage() {
             <Database size={16} color="var(--accent-primary)" />
           </div>
           <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--text-primary)" }}>
-            {sources.length}
+            {safeSources.length}
           </div>
           <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
             Configured telemetry endpoints
@@ -184,7 +190,7 @@ export default function LogSourcesPage() {
             <UploadCloud size={16} color="var(--accent-secondary)" />
           </div>
           <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--text-primary)" }}>
-            {batches.length}
+            {safeBatches.length}
           </div>
           <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
             {activeBatchesCount > 0 ? `${activeBatchesCount} processing now` : "All batches completed"}
@@ -220,7 +226,7 @@ export default function LogSourcesPage() {
         <div style={{ marginTop: "var(--space-4)" }}>
           {activeTab === "sources" && (
             <LogSourceTable
-              sources={sources}
+              sources={safeSources}
               isLoading={isLoadingSources}
               onUploadForSource={handleUploadForSource}
               onEditSource={handleEditSource}
@@ -231,7 +237,7 @@ export default function LogSourcesPage() {
 
           {activeTab === "history" && (
             <UploadHistoryTable
-              batches={batches}
+              batches={safeBatches}
               isLoading={isLoadingBatches}
               onViewLogs={handleExploreBatchLogs}
               onViewErrors={handleViewBatchErrors}

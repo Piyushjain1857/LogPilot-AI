@@ -15,9 +15,14 @@ export default class ErrorBoundary extends React.Component {
     console.error("ErrorBoundary caught an unhandled error:", error, errorInfo);
   }
 
+  componentDidUpdate(prevProps) {
+    if (this.state.hasError && this.props.resetKey !== undefined && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+
   handleReset = () => {
     this.setState({ hasError: false, error: null });
-    window.location.reload();
   };
 
   render() {
@@ -25,13 +30,13 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div
           style={{
-            minHeight: "100vh",
+            minHeight: "450px",
+            flex: 1,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             padding: "var(--space-6)",
-            backgroundColor: "var(--bg-primary)",
             color: "var(--text-primary)",
             textAlign: "center",
           }}

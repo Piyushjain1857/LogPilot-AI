@@ -65,7 +65,11 @@ export const uploadService = {
       params,
       signal,
     });
-    return response.data;
+    const data = response.data;
+    if (data && Array.isArray(data.items)) {
+      return data.items;
+    }
+    return Array.isArray(data) ? data : [];
   },
 
   /**

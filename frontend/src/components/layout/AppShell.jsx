@@ -1,13 +1,15 @@
 import React, { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import CommandPalette from "../common/CommandPalette";
 import Drawer from "../common/Drawer";
+import ErrorBoundary from "../common/ErrorBoundary";
 import { useBackendConnection } from "../../hooks/useBackendConnection";
 import { useWorkspace } from "../../context/WorkspaceContext";
 
 export default function AppShell() {
+  const location = useLocation();
   const { sidebarCollapsed, setSidebarCollapsed } = useWorkspace();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -55,7 +57,9 @@ export default function AppShell() {
         />
 
         <main className="content-body">
-          <Outlet />
+          <ErrorBoundary resetKey={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 
