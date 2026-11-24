@@ -24,7 +24,7 @@ const NAVIGATION_GROUPS = [
     title: "MONITORING",
     items: [
       { path: "/app", label: "Overview", icon: LayoutDashboard, end: true },
-      { path: "/app/live-logs", label: "Live Logs", icon: Radio },
+      { path: "/app/live-logs", label: "Live Logs", icon: Radio, pulse: true },
       { path: "/app/log-explorer", label: "Log Explorer", icon: FileSearch },
       { path: "/app/log-sources", label: "Log Sources", icon: Server },
     ],
@@ -32,10 +32,10 @@ const NAVIGATION_GROUPS = [
   {
     title: "INTELLIGENCE",
     items: [
-      { path: "/app/anomalies", label: "Anomaly Detection", icon: Activity },
-      { path: "/app/incidents", label: "Incidents", icon: AlertTriangle },
+      { path: "/app/anomalies", label: "Anomaly Detection", icon: Activity, badge: "3" },
+      { path: "/app/incidents", label: "Incidents", icon: AlertTriangle, badge: "1", badgeVariant: "error" },
       { path: "/app/root-cause", label: "Root Cause Analysis", icon: GitBranch },
-      { path: "/app/troubleshooter", label: "AI Troubleshooter", icon: Bot },
+      { path: "/app/troubleshooter", label: "AI Troubleshooter", icon: Bot, badge: "AI", badgeVariant: "success" },
     ],
   },
   {
@@ -108,7 +108,22 @@ export default function Sidebar({
                   className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
                 >
                   <Icon size={16} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && (
+                    <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1 }}>
+                      <span>{item.label}</span>
+                      {item.badge && (
+                        <span
+                          className={`badge ${item.badgeVariant === "error" ? "badge-error" : item.badgeVariant === "success" ? "badge-success" : "badge-neutral"}`}
+                          style={{ fontSize: "10px", padding: "1px 6px" }}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                      {item.pulse && (
+                        <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "var(--status-error)" }} />
+                      )}
+                    </span>
+                  )}
                 </NavLink>
               );
 

@@ -60,7 +60,14 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.6);
   --shadow-card: 0 0 0 1px var(--border-subtle), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-strong);
   --shadow-dropdown: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
+  --shadow-glow-accent: 0 0 20px rgba(59, 130, 246, 0.25);
+  --shadow-glow-error: 0 0 20px rgba(239, 68, 68, 0.25);
+
+  /* Scrollbars */
+  --scrollbar-thumb: #334460;
+  --scrollbar-track: rgba(13, 20, 34, 0.4);
 }
 
 [data-theme="light"] {
@@ -119,7 +126,14 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
   --shadow-card: 0 0 0 1px var(--border-subtle), 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 8px 20px -4px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--border-strong);
   --shadow-dropdown: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  --shadow-glow-accent: 0 0 16px rgba(37, 99, 235, 0.15);
+  --shadow-glow-error: 0 0 16px rgba(220, 38, 38, 0.15);
+
+  /* Scrollbars */
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-track: rgba(241, 245, 249, 0.5);
 }
 
 :root {

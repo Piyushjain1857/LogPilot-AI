@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Cpu,
   Plus,
+  UploadCloud,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -183,8 +184,13 @@ export default function OverviewPage() {
               Refresh
             </Button>
             <Link to="/app/log-sources">
-              <Button variant="primary" size="sm" icon={Plus}>
-                Add Log Source
+              <Button variant="secondary" size="sm" icon={Plus}>
+                Add Source
+              </Button>
+            </Link>
+            <Link to="/app/log-sources">
+              <Button variant="primary" size="sm" icon={UploadCloud}>
+                Upload Logs
               </Button>
             </Link>
           </div>
@@ -557,7 +563,7 @@ export default function OverviewPage() {
 
         <Card title="Platform Capabilities Matrix">
           <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-caption)", marginBottom: "var(--space-3)" }}>
-            Truthful reflection of Phase 2 UI implementation vs planned future stages.
+            Truthful reflection of current Phase 3 platform readiness vs planned future stages.
           </p>
           <CapabilitiesGrid capabilities={capabilities} loading={loading} />
         </Card>
