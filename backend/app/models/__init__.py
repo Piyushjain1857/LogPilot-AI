@@ -8,6 +8,7 @@ from app.models.cluster import LogCluster, ClusterEvolution
 from app.models.incident import Incident, IncidentLog
 from app.models.analysis import AnalysisRun
 from app.models.playbook import RemediationPlaybook, RemediationAuditLog
+from app.models.notification import Notification
 from app.models.event import SystemEvent
 from app.models.preference import WorkspacePreference
 from app.models.saved_search import SavedSearch, SearchHistory
@@ -27,6 +28,7 @@ __all__ = [
     "AnalysisRun",
     "RemediationPlaybook",
     "RemediationAuditLog",
+    "Notification",
     "SystemEvent",
     "WorkspacePreference",
     "SavedSearch",

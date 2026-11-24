@@ -18,6 +18,7 @@ from app.api.v1.endpoints import (
     root_cause,
     troubleshooter,
     remediation,
+    notifications,
 )
 
 api_router = APIRouter()
@@ -36,6 +37,7 @@ api_router.include_router(incidents.router, prefix="/incidents", tags=["incident
 api_router.include_router(root_cause.router, prefix="/root-cause", tags=["root_cause"])
 api_router.include_router(troubleshooter.router, prefix="/troubleshooter", tags=["troubleshooter"])
 api_router.include_router(remediation.router, prefix="/remediation", tags=["remediation"])
+api_router.include_router(notifications.router)
 api_router.include_router(logs.router)
 api_router.include_router(ingest.router)
 api_router.include_router(source_tokens.router)

@@ -63,6 +63,7 @@ export default function AppShell() {
       <CommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
+        onOpen={() => setCommandPaletteOpen(true)}
       />
     </div>
   );

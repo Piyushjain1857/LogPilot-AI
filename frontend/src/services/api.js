@@ -106,6 +106,46 @@ export const getSourceHealth = async (signal) => {
 };
 
 /**
+ * Fetch microservice health matrix (GET /api/v1/overview/service-matrix)
+ */
+export const getServiceMatrix = async (signal) => {
+  const response = await apiClient.get("/overview/service-matrix", { signal });
+  return response.data;
+};
+
+/**
+ * Fetch high-level command center telemetry (GET /api/v1/overview/command-center)
+ */
+export const getCommandCenterTelemetry = async (signal) => {
+  const response = await apiClient.get("/overview/command-center", { signal });
+  return response.data;
+};
+
+/**
+ * Fetch real-time system notifications (GET /api/v1/notifications)
+ */
+export const getNotifications = async (unreadOnly = false, signal) => {
+  const response = await apiClient.get(`/notifications?unread_only=${unreadOnly}`, { signal });
+  return response.data;
+};
+
+/**
+ * Mark notification as read (POST /api/v1/notifications/:id/read)
+ */
+export const markNotificationRead = async (notificationId, signal) => {
+  const response = await apiClient.post(`/notifications/${notificationId}/read`, {}, { signal });
+  return response.data;
+};
+
+/**
+ * Mark all notifications as read (POST /api/v1/notifications/clear)
+ */
+export const clearAllNotifications = async (signal) => {
+  const response = await apiClient.post("/notifications/clear", {}, { signal });
+  return response.data;
+};
+
+/**
  * Fetch workspace preferences (GET /api/v1/settings/preferences)
  */
 export const getPreferences = async (signal) => {

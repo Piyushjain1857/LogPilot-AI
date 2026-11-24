@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   FileText,
   Settings,
+  Layers,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { group: "MONITORING", path: "/app/live-logs", title: "Live Logs Stream", icon: Radio },
   { group: "MONITORING", path: "/app/log-explorer", title: "Log Explorer & Search", icon: FileSearch },
   { group: "MONITORING", path: "/app/log-sources", title: "Log Sources & Intake", icon: Server },
+  { group: "INTELLIGENCE", path: "/app/clusters", title: "Log Clusters & Patterns", icon: Layers },
   { group: "INTELLIGENCE", path: "/app/anomalies", title: "Anomaly Detection", icon: Activity },
   { group: "INTELLIGENCE", path: "/app/incidents", title: "Incident Management", icon: AlertTriangle },
   { group: "INTELLIGENCE", path: "/app/root-cause", title: "Root Cause Analysis", icon: GitBranch },
@@ -29,16 +31,29 @@ const NAV_ITEMS = [
   { group: "WORKSPACE", path: "/app/settings", title: "Settings & Preferences", icon: Settings },
 ];
 
-export default function CommandPalette({ isOpen, onClose }) {
+export default function CommandPalette({ isOpen, onClose, onOpen }) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
-  const filteredItems = NAV_ITEMS.filter((item) =>
-    item.title.toLowerCase().includes(query.toLowerCase()) ||
-    item.group.toLowerCase().includes(query.toLowerCase())
-  );
+  const allItems = useMemo(() => {
+    const matchingNav = NAV_ITEMS.filter((item) =>
+      item.title.toLowerCase().includes(query.toLowerCase()) ||
+      item.group.toLowerCase().includes(query.toLowerCase())
+    );
+
+    const items = [...matchingNav];
+    if (query.trim()) {
+      items.push({
+        group: "LOG QUERY",
+        path: `/app/log-explorer?q=${encodeURIComponent(query.trim())}`,
+        title: `Search logs for "${query.trim()}"`,
+        icon: Search,
+      });
+    }
+    return items;
+  }, [query]);
 
   useEffect(() => {
     if (isOpen) {
@@ -50,35 +65,39 @@ export default function CommandPalette({ isOpen, onClose }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (!isOpen) {
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-          e.preventDefault();
-          onClose(); // toggle or open handled by caller
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (isOpen) {
+          onClose();
+        } else if (onOpen) {
+          onOpen();
         }
         return;
       }
+
+      if (!isOpen) return;
 
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((prev) => (prev + 1) % (filteredItems.length || 1));
+        setSelectedIndex((prev) => (prev + 1) % (allItems.length || 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIndex((prev) =>
-          prev === 0 ? Math.max(filteredItems.length - 1, 0) : prev - 1
+          prev === 0 ? Math.max(allItems.length - 1, 0) : prev - 1
         );
-      } else if (e.key === "Enter" && filteredItems[selectedIndex]) {
+      } else if (e.key === "Enter" && allItems[selectedIndex]) {
         e.preventDefault();
-        navigate(filteredItems[selectedIndex].path);
+        navigate(allItems[selectedIndex].path);
         onClose();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, filteredItems, selectedIndex, navigate, onClose]);
+  }, [isOpen, allItems, selectedIndex, navigate, onClose, onOpen]);
 
   if (!isOpen) return null;
 
@@ -91,7 +110,7 @@ export default function CommandPalette({ isOpen, onClose }) {
             ref={inputRef}
             type="text"
             className="command-palette-input"
-            placeholder="Search pages, navigation routes, settings... (ESC to close)"
+            placeholder="Search pages, navigation routes, settings, runbooks... (ESC to close)"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -101,12 +120,12 @@ export default function CommandPalette({ isOpen, onClose }) {
         </div>
 
         <div className="command-palette-list">
-          {filteredItems.length === 0 ? (
+          {allItems.length === 0 ? (
             <div style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-muted)", fontSize: "var(--text-body-sm)" }}>
               No matching pages found for &ldquo;{query}&rdquo;
             </div>
           ) : (
-            filteredItems.map((item, index) => {
+            allItems.map((item, index) => {
               const Icon = item.icon;
               const isSelected = index === selectedIndex;
               return (

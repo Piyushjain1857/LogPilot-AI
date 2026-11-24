@@ -28,6 +28,8 @@ import {
 import PageHeader from "../components/common/PageHeader";
 import MetricCard from "../components/dashboard/MetricCard";
 import CapabilitiesGrid from "../components/dashboard/CapabilitiesGrid";
+import SystemPulseBanner from "../components/dashboard/SystemPulseBanner";
+import ServiceHealthMatrix from "../components/dashboard/ServiceHealthMatrix";
 import ChartCard from "../components/common/ChartCard";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
@@ -46,6 +48,8 @@ import {
   getSeverityDistribution,
   getRecentIncidents,
   getSourceHealth,
+  getServiceMatrix,
+  getCommandCenterTelemetry,
 } from "../services/api";
 
 const SEVERITY_BAR_COLORS = {
@@ -91,6 +95,9 @@ export default function OverviewPage() {
   const [severityDist, setSeverityDist] = useState({ total: 0, distribution: [] });
   const [recentIncidents, setRecentIncidents] = useState({ incidents: [] });
   const [sourceHealth, setSourceHealth] = useState({ sources: [] });
+  const [serviceMatrix, setServiceMatrix] = useState([]);
+  const [telemetry, setTelemetry] = useState({});
+  const [selectedService, setSelectedService] = useState("all");
 
   const abortRef = useRef(null);
 
@@ -115,6 +122,8 @@ export default function OverviewPage() {
           distRes,
           incidentsRes,
           sourcesRes,
+          matrixRes,
+          telemetryRes,
         ] = await Promise.all([
           getSystemCapabilities(signal),
           getOverviewSummary(signal),
@@ -122,6 +131,8 @@ export default function OverviewPage() {
           getSeverityDistribution(signal),
           getRecentIncidents(5, signal),
           getSourceHealth(signal),
+          Promise.resolve(getServiceMatrix ? getServiceMatrix(signal) : { services: [] }).catch(() => ({ services: [] })),
+          Promise.resolve(getCommandCenterTelemetry ? getCommandCenterTelemetry(signal) : {}).catch(() => ({})),
         ]);
 
         setCapabilities(capRes || {});
@@ -130,6 +141,8 @@ export default function OverviewPage() {
         setSeverityDist(distRes || { total: 0, distribution: [] });
         setRecentIncidents(incidentsRes || { incidents: [] });
         setSourceHealth(sourcesRes || { sources: [] });
+        setServiceMatrix(matrixRes?.services || []);
+        setTelemetry(telemetryRes || {});
         setLastRefreshed(new Date().toLocaleTimeString());
         setError(null);
       } catch (err) {
@@ -178,8 +191,13 @@ export default function OverviewPage() {
         badge={
           systemStatus ? (
             <StatusBadge
-              status={systemStatus.backend_status === "online" ? "healthy" : "unhealthy"}
-              label={systemStatus.backend_status.toUpperCase()}
+              status={
+                (systemStatus.backend_status || systemStatus.status) === "online" ||
+                (systemStatus.backend_status || systemStatus.status) === "healthy"
+                  ? "healthy"
+                  : "unhealthy"
+              }
+              label={String(systemStatus.backend_status || systemStatus.status || "online").toUpperCase()}
             />
           ) : null
         }
@@ -211,6 +229,19 @@ export default function OverviewPage() {
             </Link>
           </div>
         }
+      />
+
+      {/* Phase 13: Unified AIOps Command Center Pulse */}
+      <SystemPulseBanner
+        telemetry={telemetry}
+        timeRange={timeRange}
+        onTimeRangeChange={(r) => {
+          setTimeRange(r);
+        }}
+        selectedService={selectedService}
+        onServiceChange={(svc) => setSelectedService(svc)}
+        onRefresh={() => fetchData(true)}
+        refreshing={refreshing}
       />
 
       {error && (
@@ -359,6 +390,14 @@ export default function OverviewPage() {
           />
         </div>
       )}
+
+      {/* Phase 13: Service Dependency Health Matrix */}
+      <ServiceHealthMatrix
+        services={serviceMatrix}
+        selectedService={selectedService}
+        onSelectService={(svc) => setSelectedService(svc)}
+        loading={loading}
+      />
 
       {/* Charts Section: Activity Time Series & Severity Distribution */}
       <div

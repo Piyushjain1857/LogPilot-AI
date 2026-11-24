@@ -61,3 +61,31 @@ class SourceHealthItem(BaseModel):
 
 class SourceHealthResponse(BaseModel):
     sources: List[SourceHealthItem]
+
+
+class ServiceMatrixItem(BaseModel):
+    service_name: str
+    tier: str
+    health: str  # HEALTHY, DEGRADED, CRITICAL
+    log_count: int
+    error_count: int
+    error_rate: float
+    avg_latency_ms: int
+    last_seen_at: Optional[str] = None
+    open_incidents: int = 0
+
+
+class ServiceMatrixResponse(BaseModel):
+    services: List[ServiceMatrixItem]
+
+
+class CommandCenterTelemetryResponse(BaseModel):
+    system_health_index: int  # 0 to 100
+    system_status: str  # HEALTHY, DEGRADED, CRITICAL
+    events_per_second: float
+    errors_per_minute: float
+    active_incidents_count: int
+    unresolved_anomalies_count: int
+    total_logs: int
+    error_rate_percentage: float
+

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Menu,
@@ -6,10 +6,7 @@ import {
   Bell,
   BookOpen,
   ExternalLink,
-  CheckCircle2,
   AlertCircle,
-  Database,
-  Cpu,
   ChevronDown,
   Settings,
 } from "lucide-react";
@@ -17,6 +14,7 @@ import Breadcrumbs from "./Breadcrumbs";
 import ConnectionIndicator from "../common/ConnectionIndicator";
 import ThemeToggle from "../common/ThemeToggle";
 import DropdownMenu from "../common/DropdownMenu";
+import { getNotifications, clearAllNotifications } from "../../services/api";
 
 export default function Navbar({
   onToggleSidebar,
@@ -25,35 +23,59 @@ export default function Navbar({
   latencyMs = null,
 }) {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [liveNotifications, setLiveNotifications] = useState([]);
   const isMac = typeof navigator !== "undefined" && navigator.platform?.toUpperCase().indexOf("MAC") >= 0;
 
-  // Real diagnostic notification events based on system state
-  const notifications = [
+  useEffect(() => {
+    let isMounted = true;
+    getNotifications()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setLiveNotifications(data);
+          const unread = data.filter((n) => !n.is_read).length;
+          setUnreadCount(unread);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleClearNotifications = async () => {
+    try {
+      await clearAllNotifications();
+      setLiveNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.warn("Could not clear notifications:", err);
+    }
+  };
+
+  // Fallback diagnostic notification events based on system state
+  const fallbackNotifications = [
     {
       id: "ev-1",
       title: connectionStatus === "connected" ? "FastAPI Backend Connected" : "Backend Connection Degraded",
-      desc: connectionStatus === "connected" ? "Live REST & health check telemetry responding normally." : "Connection failed. Retrying in background.",
-      time: "Just now",
-      icon: connectionStatus === "connected" ? CheckCircle2 : AlertCircle,
-      color: connectionStatus === "connected" ? "var(--status-success)" : "var(--status-error)",
+      message: connectionStatus === "connected" ? "Live REST & health check telemetry responding normally." : "Connection failed. Retrying in background.",
+      severity: connectionStatus === "connected" ? "INFO" : "WARNING",
     },
     {
       id: "ev-2",
       title: "SQLite Database Initialized",
-      desc: "Foreign keys enforced via PRAGMA foreign_keys=ON; composite indexes verified.",
-      time: "Startup",
-      icon: Database,
-      color: "var(--accent-primary)",
+      message: "Foreign keys enforced via PRAGMA foreign_keys=ON; composite indexes verified.",
+      severity: "INFO",
     },
     {
       id: "ev-3",
       title: "Gemini AI Agent Interface Ready",
-      desc: "Safe fallback active. Set GEMINI_API_KEY in backend/.env to activate LLM reasoning.",
-      time: "Startup",
-      icon: Cpu,
-      color: "var(--status-warning)",
+      message: "Safe fallback active. Set GEMINI_API_KEY in backend/.env to activate LLM reasoning.",
+      severity: "INFO",
     },
   ];
+
+  const activeAlerts = liveNotifications.length > 0 ? liveNotifications : fallbackNotifications;
 
   return (
     <header className="navbar">
@@ -116,7 +138,7 @@ export default function Navbar({
             </button>
           }
         >
-          <div style={{ width: 300, padding: "var(--space-2)" }}>
+          <div style={{ width: 320, padding: "var(--space-2)" }}>
             <div
               style={{
                 display: "flex",
@@ -124,31 +146,41 @@ export default function Navbar({
                 alignItems: "center",
                 padding: "var(--space-2) var(--space-3)",
                 borderBottom: "1px solid var(--border-subtle)",
-                marginBottom: var_space(2),
+                marginBottom: "var(--space-2)",
               }}
             >
-              <span style={{ fontWeight: 600, fontSize: "var(--text-caption)" }}>System Diagnostics</span>
-              <span className="badge badge-default" style={{ fontSize: 10 }}>Live Telemetry</span>
+              <span style={{ fontWeight: 600, fontSize: "var(--text-caption)" }}>Live Alert Notifications</span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={handleClearNotifications}
+                style={{ fontSize: 11, padding: "2px 6px", color: "var(--accent-primary)" }}
+              >
+                Clear All
+              </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-              {notifications.map((n) => {
-                const Icon = n.icon;
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", maxHeight: "280px", overflowY: "auto" }}>
+              {activeAlerts.map((n) => {
+                const isCrit = n.severity === "CRITICAL";
+                const isWarn = n.severity === "WARNING";
+                const color = isCrit ? "var(--status-critical)" : isWarn ? "var(--status-warning)" : "var(--accent-primary)";
                 return (
                   <div
                     key={n.id}
                     style={{
                       display: "flex",
                       gap: "var(--space-2)",
-                      padding: "var(--space-2)",
+                      padding: "var(--space-2) var(--space-3)",
                       borderRadius: "var(--radius-sm)",
-                      backgroundColor: "var(--bg-elevated)",
+                      backgroundColor: n.is_read ? "var(--bg-elevated)" : "rgba(56, 189, 248, 0.08)",
+                      border: n.is_read ? "1px solid transparent" : "1px solid var(--border-subtle)",
                     }}
                   >
-                    <Icon size={14} style={{ color: n.color, marginTop: 2, flexShrink: 0 }} />
+                    <AlertCircle size={14} style={{ color, marginTop: 2, flexShrink: 0 }} />
                     <div style={{ flex: 1, fontSize: "var(--text-micro)" }}>
                       <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{n.title}</div>
-                      <div style={{ color: "var(--text-secondary)", marginTop: 2 }}>{n.desc}</div>
+                      <div style={{ color: "var(--text-secondary)", marginTop: 2 }}>{n.message || n.desc}</div>
                     </div>
                   </div>
                 );
@@ -201,8 +233,4 @@ export default function Navbar({
       </div>
     </header>
   );
-}
-
-function var_space(n) {
-  return `var(--space-${n})`;
 }

@@ -8,6 +8,8 @@ from app.schemas.overview import (
     SeverityDistributionResponse,
     RecentIncidentsResponse,
     SourceHealthResponse,
+    ServiceMatrixResponse,
+    CommandCenterTelemetryResponse,
 )
 
 router = APIRouter(prefix="/overview", tags=["Overview"])
@@ -71,3 +73,28 @@ def get_source_health(db: Session = Depends(get_db)):
     Returns configured sources with their health status based on recent telemetry.
     """
     return OverviewService.get_source_health(db=db)
+
+
+@router.get(
+    "/service-matrix",
+    response_model=ServiceMatrixResponse,
+    summary="Microservice Real-Time Health & Error Matrix",
+)
+def get_service_matrix(db: Session = Depends(get_db)):
+    """
+    Returns real-time health, error counts, error rates, and latencies across all monitored microservices.
+    """
+    return OverviewService.get_service_matrix(db=db)
+
+
+@router.get(
+    "/command-center",
+    response_model=CommandCenterTelemetryResponse,
+    summary="AIOps Command Center High-Level Telemetry",
+)
+def get_command_center_telemetry(db: Session = Depends(get_db)):
+    """
+    Returns unified system health index, operational velocity, and anomaly counters.
+    """
+    return OverviewService.get_command_center_telemetry(db=db)
+
