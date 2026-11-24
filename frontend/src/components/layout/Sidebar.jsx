@@ -8,6 +8,7 @@ import {
   Activity,
   AlertTriangle,
   GitBranch,
+  Layers,
   Bot,
   ShieldCheck,
   FileText,
@@ -34,6 +35,7 @@ const NAVIGATION_GROUPS = [
     title: "INTELLIGENCE",
     items: [
       { path: "/app/anomalies", label: "Anomaly Detection", icon: Activity, badge: "3" },
+      { path: "/app/clusters", label: "Pattern Clusters", icon: Layers },
       { path: "/app/incidents", label: "Incidents", icon: AlertTriangle, badge: "1", badgeVariant: "error" },
       { path: "/app/root-cause", label: "Root Cause Analysis", icon: GitBranch },
       { path: "/app/troubleshooter", label: "AI Troubleshooter", icon: Bot, badge: "AI", badgeVariant: "success" },

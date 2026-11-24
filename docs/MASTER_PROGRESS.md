@@ -18,9 +18,9 @@
 | **Phase 4** | Intelligent Log Parsing & Normalization | ✅ COMPLETED | Integrated | `a105b17` | Synced |
 | **Phase 5** | Real-Time Log Streaming & Live Monitoring | ✅ COMPLETED | 59/59 BE, 40/40 FE | `864d7c1` | Synced |
 | **Phase 6** | Advanced Log Explorer & Intelligent Search | ✅ COMPLETED | 62/62 BE, 46/46 FE | `957bfaa` | Synced |
-| **Phase 7** | Intelligent Anomaly Detection Engine | ✅ COMPLETED | 65/65 BE, 51/51 FE | `auto` | Synced |
-| **Phase 8** | Intelligent Log Clustering & Error Grouping | 🔄 IN PROGRESS | 0/0 | TBD | Pending |
-| **Phase 9** | Automated Incident Management System | ⏳ QUEUED | Pending | TBD | Pending |
+| **Phase 7** | Intelligent Anomaly Detection Engine | ✅ COMPLETED | 65/65 BE, 51/51 FE | `a510cff` | Synced |
+| **Phase 8** | Intelligent Log Clustering & Error Grouping | ✅ COMPLETED | 66/66 BE, 55/55 FE | `Pending` | In Progress Commit |
+| **Phase 9** | Automated Incident Management System | 🔄 IN PROGRESS | Pending | TBD | Pending |
 | **Phase 10** | Evidence-Based Root Cause Analysis Engine | ⏳ QUEUED | Pending | TBD | Pending |
 | **Phase 11** | Gemini AI Troubleshooter & Agent System | ⏳ QUEUED | Pending | TBD | Pending |
 | **Phase 12** | Intelligent Remediation & Automated Playbooks | ⏳ QUEUED | Pending | TBD | Pending |
@@ -30,12 +30,11 @@
 
 ---
 
-## Current Active Phase: Phase 6 — Advanced Log Explorer & Intelligent Search
+## Current Active Phase: Phase 9 — Automated Incident Management System
 
 ### Objectives:
-- SQLite FTS5 Full-Text Search Virtual Table (`logs_fts`) synchronized with insert/update/delete triggers.
-- Safe query language tokenizer and AST parser supporting `AND`, `OR`, `NOT`, quoted phrases, field filters (`service:`, `severity:`, `trace_id:`, `status:`, `duration_ms:>`), and numeric comparisons.
-- Distributed Trace Investigation: grouping logs by `trace_id`, computing observed spans, chronologies, and service hop maps.
-- Saved searches (`SavedSearch` model) & search history endpoints.
-- High-performance streaming export for CSV (with formula injection escaping) and JSON.
-- Frontend Advanced Log Explorer with query autocomplete, search suggestions, syntax feedback, column toggling, details drawer, and Trace Explorer page (`/app/traces`).
+- Correlate multi-service anomalies and log clusters into unified, deduplicated incidents within dynamic sliding windows.
+- Automatically assign severity ratings (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) and track operational incident lifecycles (`OPEN`, `INVESTIGATING`, `MITIGATED`, `RESOLVED`, `CLOSED`).
+- Incident timeline generation with chronological progression of correlated events (anomalies, high-severity clusters, error spikes).
+- Service impact mapping identifying blast radius across downstream and upstream services.
+- Rich incident management UI: Incidents Board (`/app/incidents`), Kanban/table views, filter by severity/status/service, timeline inspector, acknowledge/resolve workflows.

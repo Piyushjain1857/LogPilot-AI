@@ -12,6 +12,7 @@ import LogSourcesPage from "./pages/placeholders/LogSourcesPage";
 import LogExplorerPage from "./pages/placeholders/LogExplorerPage";
 import TraceExplorerPage from "./pages/placeholders/TraceExplorerPage";
 import AnomaliesPage from "./pages/placeholders/AnomaliesPage";
+import ClusterExplorerPage from "./pages/placeholders/ClusterExplorerPage";
 import IncidentsPage from "./pages/placeholders/IncidentsPage";
 import RootCausePage from "./pages/placeholders/RootCausePage";
 import TroubleshooterPage from "./pages/placeholders/TroubleshooterPage";
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="traces" element={<TraceExplorerPage />} />
               <Route path="traces/:traceId" element={<TraceExplorerPage />} />
               <Route path="anomalies" element={<AnomaliesPage />} />
+              <Route path="clusters" element={<ClusterExplorerPage />} />
               <Route path="incidents" element={<IncidentsPage />} />
               <Route path="root-cause" element={<RootCausePage />} />
               <Route path="troubleshooter" element={<TroubleshooterPage />} />

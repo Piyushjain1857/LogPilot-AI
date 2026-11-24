@@ -4,7 +4,7 @@ from app.models.upload_batch import UploadBatch
 from app.models.ingestion_token import IngestionToken
 from app.models.ingestion_batch import IngestionBatch
 from app.models.stream_event import StreamEvent
-from app.models.cluster import LogCluster
+from app.models.cluster import LogCluster, ClusterEvolution
 from app.models.incident import Incident, IncidentLog
 from app.models.analysis import AnalysisRun
 from app.models.playbook import RemediationPlaybook
@@ -21,6 +21,7 @@ __all__ = [
     "IngestionBatch",
     "StreamEvent",
     "LogCluster",
+    "ClusterEvolution",
     "Incident",
     "IncidentLog",
     "AnalysisRun",
