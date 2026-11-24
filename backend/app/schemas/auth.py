@@ -8,6 +8,14 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    full_name: Optional[str] = None
+    role: Optional[str] = "normal"
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

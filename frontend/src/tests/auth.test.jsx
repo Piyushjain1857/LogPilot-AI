@@ -11,6 +11,7 @@ vi.mock("../services/api", async (importOriginal) => {
   return {
     ...actual,
     login: vi.fn(),
+    register: vi.fn(),
     logout: vi.fn().mockResolvedValue({ status: "success" }),
     getCurrentUserProfile: vi.fn().mockResolvedValue(null),
     getDemoAccounts: vi.fn().mockResolvedValue({
@@ -131,6 +132,63 @@ describe("JWT Authentication and Multi-Role Login", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Invalid username or password")).toBeInTheDocument();
+    });
+  });
+
+  it("switches to Create Account tab and submits registration with selected role", async () => {
+    api.register.mockResolvedValueOnce({
+      access_token: "mock-jwt-registered-token",
+      token_type: "bearer",
+      role: "admin",
+      user: {
+        id: "usr-new-admin",
+        username: "test_admin",
+        email: "test_admin@example.com",
+        role: "admin",
+        full_name: "Test Admin",
+        is_active: true,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <LoginPage />
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    // Switch to Create Account tab
+    const createAccountTab = screen.getByRole("button", { name: /create account/i });
+    fireEvent.click(createAccountTab);
+
+    expect(screen.getByText("Create LogPilot Account")).toBeInTheDocument();
+    expect(screen.getByLabelText(/username \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/work email \*/i)).toBeInTheDocument();
+
+    const usernameInput = screen.getByLabelText(/username \*/i);
+    const emailInput = screen.getByLabelText(/work email \*/i);
+    const passwordInput = screen.getByLabelText(/^password \*/i);
+
+    fireEvent.change(usernameInput, { target: { value: "test_admin" } });
+    fireEvent.change(emailInput, { target: { value: "test_admin@example.com" } });
+    fireEvent.change(passwordInput, { target: { value: "SecurePass123!" } });
+
+    // Select Administrator role
+    const adminRoleCard = screen.getByText("Full platform settings, maintenance & playbooks").closest(".signup-role-card");
+    fireEvent.click(adminRoleCard);
+
+    const submitBtn = screen.getByRole("button", { name: /create account & sign in/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api.register).toHaveBeenCalledWith({
+        username: "test_admin",
+        email: "test_admin@example.com",
+        password: "SecurePass123!",
+        full_name: undefined,
+        role: "admin",
+      });
     });
   });
 });

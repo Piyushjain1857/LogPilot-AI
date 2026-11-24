@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { login as apiLogin, logout as apiLogout, getCurrentUserProfile } from "../services/api";
+import { login as apiLogin, register as apiRegister, logout as apiLogout, getCurrentUserProfile } from "../services/api";
 
 const AuthContext = createContext({
   user: null,
@@ -10,6 +10,7 @@ const AuthContext = createContext({
   isNormal: false,
   loading: false,
   login: async () => {},
+  register: async () => {},
   logout: () => {},
   switchDemoRole: async () => {},
 });
@@ -109,6 +110,23 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const register = useCallback(async (userData) => {
+    setLoading(true);
+    try {
+      const data = await apiRegister(userData);
+      setToken(data.access_token);
+      setUser(data.user);
+      try {
+        localStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+        localStorage.removeItem(LOGGED_OUT_KEY);
+      } catch {}
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await apiLogout().catch(() => {});
@@ -146,6 +164,7 @@ export function AuthProvider({ children }) {
         isNormal,
         loading,
         login,
+        register,
         logout,
         switchDemoRole,
       }}

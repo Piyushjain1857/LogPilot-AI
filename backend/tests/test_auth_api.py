@@ -115,3 +115,65 @@ def test_jwt_role_enforcement_normal_vs_admin(client: TestClient):
     )
     assert admin_exec.status_code == 200
     assert admin_exec.json()["all_passed"] is True
+
+
+def test_register_new_normal_user_success(client: TestClient):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": "new_operator",
+            "email": "new_operator@example.com",
+            "password": "Password123!",
+            "full_name": "New SRE Operator",
+            "role": "normal",
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert "access_token" in data
+    assert data["role"] == "normal"
+    assert data["user"]["username"] == "new_operator"
+    assert data["user"]["email"] == "new_operator@example.com"
+
+
+def test_register_new_admin_user_success(client: TestClient):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": "new_admin",
+            "email": "new_admin@example.com",
+            "password": "Password123!",
+            "full_name": "New Admin User",
+            "role": "admin",
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["role"] == "admin"
+    assert data["user"]["username"] == "new_admin"
+
+
+def test_register_duplicate_username_conflict(client: TestClient):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": "admin",
+            "email": "another_admin@example.com",
+            "password": "Password123!",
+        },
+    )
+    assert response.status_code == 409
+    assert "already taken" in response.json()["detail"]
+
+
+def test_register_short_password_validation(client: TestClient):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": "valid_user",
+            "email": "valid@example.com",
+            "password": "123",
+        },
+    )
+    assert response.status_code == 400
+    assert "at least 6 characters" in response.json()["detail"]

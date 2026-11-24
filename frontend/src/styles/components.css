@@ -1678,7 +1678,7 @@ select option {
 }
 
 /* ==========================================================================
-   Authentication & Login Page Styles (JWT & Multi-Role RBAC)
+   Authentication & Login/Signup Page Styles (Split-Screen & Dual-Tier RBAC)
    ========================================================================== */
 .login-page-container {
   min-height: 100vh;
@@ -1686,26 +1686,176 @@ select option {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4);
   background-color: var(--bg-base);
   background-image: 
-    radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 90% 90%, rgba(139, 92, 246, 0.06) 0%, transparent 40%);
+    radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 45%);
   position: relative;
   overflow-x: hidden;
 }
 
-.login-card {
+.login-topbar {
   width: 100%;
-  max-width: 480px;
-  background-color: var(--bg-surface);
+  max-width: 1160px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+  padding: 0 var(--space-2);
+}
+
+.login-split-layout {
+  width: 100%;
+  max-width: 1160px;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: var(--space-8);
+  align-items: stretch;
+}
+
+/* Left Showcase Panel */
+.login-showcase-panel {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: var(--space-8);
-  box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  justify-content: space-between;
+  box-shadow: var(--shadow-lg), 0 20px 40px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+}
+
+.login-showcase-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-primary) 0%, #8b5cf6 50%, var(--accent-secondary) 100%);
+}
+
+.showcase-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background-color: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: var(--accent-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.pulse-dot-green {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--status-success);
+  box-shadow: 0 0 8px var(--status-success);
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.showcase-headline {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-primary);
+  margin: var(--space-4) 0 var(--space-3);
+  letter-spacing: -0.02em;
+}
+
+.showcase-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-6);
+}
+
+.showcase-preview-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.showcase-terminal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.showcase-terminal-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background-color: var(--bg-elevated);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.showcase-terminal-code .highlight-redact {
+  color: #38bdf8;
+  background-color: rgba(56, 189, 248, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.showcase-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.showcase-spec-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.showcase-spec-item svg {
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+/* Right Auth Console Card */
+.login-card {
+  width: 100%;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-7);
+  box-shadow: var(--shadow-lg), 0 20px 40px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
   position: relative;
   backdrop-filter: blur(16px);
 }
@@ -1713,34 +1863,74 @@ select option {
 .login-header-branding {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-2);
+  align-items: flex-start;
+  gap: var(--space-1);
 }
 
 .login-logo-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-lg);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--accent-primary) 0%, #2563eb 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+/* Segmented Auth Mode Switcher (Sign In / Sign Up) */
+.auth-segmented-tabs {
+  display: flex;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 3px;
+}
+
+.auth-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.auth-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.auth-tab-btn.active {
+  background-color: var(--bg-surface);
+  color: var(--accent-primary);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-subtle);
 }
 
 .login-form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 6px;
 }
 
 .login-form-group label {
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .login-input-wrapper {
@@ -1758,7 +1948,7 @@ select option {
 
 .login-input-wrapper input {
   width: 100%;
-  padding: 10px 12px 10px 38px;
+  padding: 9px 12px 9px 38px;
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -1790,7 +1980,7 @@ select option {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: var(--space-2) 0;
+  margin: var(--space-1) 0;
   color: var(--text-muted);
   font-size: var(--text-micro);
   text-transform: uppercase;
@@ -1815,18 +2005,18 @@ select option {
 .demo-roles-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  padding: var(--space-3);
 }
 
 .demo-role-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   background-color: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -1844,12 +2034,12 @@ select option {
 
 .demo-role-item.admin-role:hover {
   border-color: #8b5cf6;
-  background-color: rgba(139, 92, 246, 0.06);
+  background-color: rgba(139, 92, 246, 0.08);
 }
 
 .demo-role-item.normal-role:hover {
   border-color: #06b6d4;
-  background-color: rgba(6, 182, 212, 0.06);
+  background-color: rgba(6, 182, 212, 0.08);
 }
 
 .role-tag-admin {
@@ -1874,4 +2064,78 @@ select option {
   border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* Signup Role Selector Cards */
+.signup-role-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.signup-role-card {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-elevated);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.signup-role-card:hover {
+  border-color: var(--border-muted);
+}
+
+.signup-role-card.selected {
+  border-color: var(--accent-primary);
+  background-color: rgba(56, 189, 248, 0.08);
+  box-shadow: 0 0 0 1px var(--accent-primary);
+}
+
+.signup-role-card.selected.admin {
+  border-color: #8b5cf6;
+  background-color: rgba(139, 92, 246, 0.08);
+  box-shadow: 0 0 0 1px #8b5cf6;
+}
+
+/* Password Strength Bar */
+.password-strength-bar {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.password-strength-segment {
+  height: 3px;
+  flex: 1;
+  border-radius: 2px;
+  background-color: var(--border-subtle);
+  transition: background-color var(--transition-fast);
+}
+
+.password-strength-segment.active-weak {
+  background-color: var(--status-critical);
+}
+
+.password-strength-segment.active-medium {
+  background-color: var(--status-warning);
+}
+
+.password-strength-segment.active-strong {
+  background-color: var(--status-success);
+}
+
+/* Responsive Split Layout */
+@media (max-width: 960px) {
+  .login-split-layout {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+  .login-showcase-panel {
+    display: none;
+  }
 }

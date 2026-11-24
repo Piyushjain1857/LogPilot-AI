@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.database.session import get_db
 from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse, UserOut, DemoAccount
-from app.core.security import verify_password, create_access_token
+from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserOut, DemoAccount
+from app.core.security import verify_password, hash_password, create_access_token
 from app.core.rbac import get_current_authenticated_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -59,6 +59,86 @@ def login(login_req: LoginRequest, db: Session = Depends(get_db)):
         token_type="bearer",
         role=user.role.lower(),
         user=UserOut.model_validate(user),
+    )
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def register(reg_req: RegisterRequest, db: Session = Depends(get_db)):
+    """
+    Registers a new user account with role selection ('normal' or 'admin') and returns a signed JWT.
+    """
+    username = reg_req.username.strip()
+    email = reg_req.email.strip().lower()
+
+    if len(username) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username must be at least 3 characters long.",
+        )
+
+    if not email or "@" not in email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A valid email address is required.",
+        )
+
+    if len(reg_req.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long.",
+        )
+
+    # Check for existing user
+    existing = db.query(User).filter(
+        or_(
+            User.username == username,
+            User.email == email,
+        )
+    ).first()
+
+    if existing:
+        if existing.username == username:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Username '{username}' is already taken. Please choose another.",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"An account with email '{email}' already exists.",
+            )
+
+    role = (reg_req.role or "normal").strip().lower()
+    if role not in ("admin", "normal"):
+        role = "normal"
+
+    pwd_hash, salt = hash_password(reg_req.password)
+    new_user = User(
+        username=username,
+        email=email,
+        hashed_password=pwd_hash,
+        salt=salt,
+        role=role,
+        full_name=reg_req.full_name or username.capitalize(),
+        is_active=True,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    token_claims = {
+        "sub": new_user.username,
+        "user_id": new_user.id,
+        "role": new_user.role.lower(),
+        "email": new_user.email,
+    }
+    access_token = create_access_token(data=token_claims)
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        role=new_user.role.lower(),
+        user=UserOut.model_validate(new_user),
     )
 
 
