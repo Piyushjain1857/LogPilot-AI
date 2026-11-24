@@ -20,9 +20,9 @@
 | **Phase 6** | Advanced Log Explorer & Intelligent Search | ✅ COMPLETED | 62/62 BE, 46/46 FE | `957bfaa` | Synced |
 | **Phase 7** | Intelligent Anomaly Detection Engine | ✅ COMPLETED | 65/65 BE, 51/51 FE | `a510cff` | Synced |
 | **Phase 8** | Intelligent Log Clustering & Error Grouping | ✅ COMPLETED | 66/66 BE, 55/55 FE | `74af96d` | Synced |
-| **Phase 9** | Automated Incident Management System | ✅ COMPLETED | 68/68 BE, 59/59 FE | `Pending` | In Progress Commit |
-| **Phase 10** | Evidence-Based Root Cause Analysis Engine | 🔄 IN PROGRESS | Pending | TBD | Pending |
-| **Phase 11** | Gemini AI Troubleshooter & Agent System | ⏳ QUEUED | Pending | TBD | Pending |
+| **Phase 9** | Automated Incident Management System | ✅ COMPLETED | 68/68 BE, 59/59 FE | `3e03c9c` | Synced |
+| **Phase 10** | Evidence-Based Root Cause Analysis Engine | ✅ COMPLETED | 70/70 BE, 63/63 FE | `Pending` | In Progress Commit |
+| **Phase 11** | Gemini AI Troubleshooter & Agent System | 🔄 IN PROGRESS | Pending | TBD | Pending |
 | **Phase 12** | Intelligent Remediation & Automated Playbooks | ⏳ QUEUED | Pending | TBD | Pending |
 | **Phase 13** | Premium Interactive Monitoring Dashboard | ⏳ QUEUED | Pending | TBD | Pending |
 | **Phase 14** | AI Chat Assistant & Professional Reporting | ⏳ QUEUED | Pending | TBD | Pending |
@@ -30,10 +30,11 @@
 
 ---
 
-## Current Active Phase: Phase 10 — Evidence-Based Root Cause Analysis Engine
+## Current Active Phase: Phase 11 — Gemini AI Troubleshooter & Agent System
 
 ### Objectives:
-- NetworkX directed acyclic graph (DAG) representation of service topology and dependency hops.
-- Automated causal hypothesis ranking based on temporal precedence, upstream-to-downstream error propagation, and log error frequency.
-- Explicit citation linking: connecting each causal hypothesis to specific log line evidence, trace IDs, and statistical anomaly scores.
-- Interactive Causal Graph visualization in the frontend with React Flow (`/app/root-cause`), node status indicators, and evidence drill-down drawers.
+- Official Google GenAI SDK integration (`google-genai`) with structured JSON schema outputs and graceful fallback when offline/unauthenticated.
+- ReAct Agentic Troubleshooting Loop: Autonomous diagnostic tool calling (`query_logs`, `inspect_trace`, `get_anomalies`, `get_service_topology`, `get_incident_detail`).
+- Strict grounding rules: Zero fabrication, zero arbitrary terminal execution; every assertion must cite actual log IDs and trace evidence.
+- Multi-perspective troubleshooting synthesis (DevOps, SRE, Security, Database, Software Architect).
+- Interactive AI Troubleshooter Workbench (`/app/troubleshooter`) with live streaming thought process, tool execution cards, verified findings, and markdown playbook recommendations.
