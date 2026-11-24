@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   Shield,
+  ShieldCheck,
   ArrowRight,
   AlertCircle,
   CheckCircle2,
@@ -162,83 +163,98 @@ export default function LoginPage() {
             </div>
 
             <h2 className="showcase-headline">
-              From High-Volume Telemetry to Autonomous Root Cause Resolution.
+              From High-Volume Telemetry to <span className="text-gradient-cyan">Autonomous Root Cause</span> Resolution.
             </h2>
 
             <p className="showcase-description">
               LogPilot AI ingests streaming microservice logs, redacts sensitive credentials in-flight, isolates anomaly frequency bursts with z-scores, and diagnoses root causes with verified citations.
             </p>
 
-            {/* In-Flight Preview Snippet */}
-            <div className="showcase-preview-card">
-              <div className="showcase-terminal-bar">
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {/* Unified Live Telemetry & RCA Console Terminal */}
+            <div className="showcase-terminal-window">
+              <div className="showcase-terminal-header">
+                <div className="terminal-dots">
+                  <span className="dot dot-red" />
+                  <span className="dot dot-yellow" />
+                  <span className="dot dot-green" />
+                </div>
+                <div className="terminal-title">
                   <Activity size={12} style={{ color: "var(--accent-primary)" }} />
-                  <span>telemetry-stream // order-service</span>
-                </span>
-                <span style={{ color: "var(--status-critical)", fontWeight: 700, fontSize: 11 }}>
-                  BURST ANOMALY z = +4.82σ
-                </span>
-              </div>
-              <div className="showcase-terminal-code">
-                <div>
-                  <span style={{ color: "var(--text-muted)" }}>2026-11-25T04:12:00Z</span>{" "}
-                  <span style={{ color: "var(--status-critical)", fontWeight: 700 }}>[CRITICAL]</span>{" "}
-                  <span style={{ color: "var(--accent-primary)" }}>[order-service]</span>{" "}
-                  DatabaseConnectionError: pool exhausted (max=100) uri=postgresql://postgres:
-                  <span className="highlight-redact">[REDACTED_PASSWORD]</span>@db-primary:5432
+                  <span>logpilot-core // telemetry-stream (us-east-1)</span>
+                </div>
+                <div className="terminal-status-pill">
+                  <span className="pulse-dot-green" />
+                  <span>LIVE · 18.4k eps</span>
                 </div>
               </div>
-            </div>
 
-            {/* Topological Causal Flow Diagram */}
-            <div className="showcase-causal-diagram">
-              <div className="causal-node-pill">
-                <Layers size={13} style={{ color: "var(--accent-primary)" }} />
-                <span>api-gateway:80</span>
-              </div>
-              <div className="causal-arrow-step">
-                <span>504 Timeout</span>
-                <span>➔</span>
-              </div>
-              <div className="causal-node-pill" style={{ borderColor: "rgba(239, 68, 68, 0.4)", backgroundColor: "rgba(239, 68, 68, 0.1)" }}>
-                <GitBranch size={13} style={{ color: "var(--status-critical)" }} />
-                <span style={{ color: "#fca5a5" }}>order-service:8080</span>
-              </div>
-              <div className="causal-arrow-step">
-                <span>Pool Lock</span>
-                <span>➔</span>
-              </div>
-              <div className="causal-node-pill">
-                <Lock size={13} style={{ color: "var(--accent-secondary)" }} />
-                <span>postgres:5432</span>
-              </div>
-            </div>
+              <div className="showcase-terminal-body">
+                {/* Real-time Ingestion Line */}
+                <div className="terminal-log-row">
+                  <span className="terminal-ts">04:12:00.182Z</span>
+                  <span className="terminal-level critical">[CRITICAL]</span>
+                  <span className="terminal-service">[order-service]</span>
+                  <span className="terminal-msg">
+                    ConnectionPoolExhausted: active=100/100 uri=postgres://postgres:
+                    <span className="highlight-redact">[REDACTED_PASSWORD]</span>@db:5432
+                  </span>
+                </div>
 
-            {/* Zero-Hallucination Evidence Citation */}
-            <div className="showcase-evidence-badge">
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <CheckCircle2 size={13} style={{ color: "var(--status-success)" }} />
-                <span>Zero-Hallucination Evidence Citation</span>
-              </span>
-              <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                sha256:d8a2...3f1c
-              </span>
+                {/* Z-Score Spike Detection */}
+                <div className="terminal-anomaly-row">
+                  <div className="anomaly-lead">
+                    <Zap size={12} style={{ color: "var(--status-critical)" }} />
+                    <span className="anomaly-tag">Z-SCORE SPIKE</span>
+                    <span className="anomaly-val">z = +4.82σ</span>
+                    <span className="anomaly-meta">(p &lt; 0.0001 · severe volume anomaly detected)</span>
+                  </div>
+                </div>
+
+                {/* Topological Causal Flow */}
+                <div className="terminal-causal-flow">
+                  <div className="causal-label">TOPOLOGICAL CASUAL CASCADE:</div>
+                  <div className="causal-flow-track">
+                    <div className="causal-step-node">
+                      <Layers size={11} style={{ color: "var(--accent-primary)" }} />
+                      <span>api-gateway:80</span>
+                    </div>
+                    <span className="causal-arrow">──[504 Timeout]──▶</span>
+                    <div className="causal-step-node culprit">
+                      <GitBranch size={11} style={{ color: "var(--status-critical)" }} />
+                      <span>order-service:8080</span>
+                    </div>
+                    <span className="causal-arrow">──[Pool Lock]──▶</span>
+                    <div className="causal-step-node">
+                      <Lock size={11} style={{ color: "var(--accent-secondary)" }} />
+                      <span>postgres:5432</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Immutable Ledger Citation */}
+                <div className="terminal-citation-row">
+                  <div className="citation-badge">
+                    <CheckCircle2 size={12} />
+                    <span>Zero-Hallucination RCA Citation</span>
+                  </div>
+                  <span className="citation-hash">sha256:d8a26f...3f1c [AUDIT-VERIFIED]</span>
+                </div>
+              </div>
             </div>
 
             {/* 3-Column Telemetry Metrics Row */}
             <div className="showcase-stats-row">
               <div className="showcase-stat-box">
-                <div className="showcase-stat-value" style={{ color: "#38bdf8" }}>18,000+</div>
-                <div className="showcase-stat-label">Logs / Sec</div>
+                <div className="showcase-stat-value" style={{ color: "#38bdf8" }}>18,450/s</div>
+                <div className="showcase-stat-label">Ingestion Rate</div>
               </div>
               <div className="showcase-stat-box">
                 <div className="showcase-stat-value" style={{ color: "#f43f5e" }}>+4.82σ</div>
-                <div className="showcase-stat-label">Z-Score Spike</div>
+                <div className="showcase-stat-label">Burst Z-Score</div>
               </div>
               <div className="showcase-stat-box">
                 <div className="showcase-stat-value" style={{ color: "#10b981" }}>&lt;250ms</div>
-                <div className="showcase-stat-label">RCA Resolution</div>
+                <div className="showcase-stat-label">Autonomous MTTR</div>
               </div>
             </div>
 
@@ -246,15 +262,15 @@ export default function LoginPage() {
             <div className="showcase-specs-grid">
               <div className="showcase-spec-item">
                 <Zap size={14} style={{ color: "#38bdf8" }} />
-                <span>Streaming Ingestion & Masking</span>
+                <span>In-Flight Secret Redaction</span>
               </div>
               <div className="showcase-spec-item">
                 <Bot size={14} style={{ color: "#a855f7" }} />
-                <span>Zero-Hallucination RCA</span>
+                <span>Deterministic Causal Ranking</span>
               </div>
               <div className="showcase-spec-item">
                 <GitBranch size={14} style={{ color: "#06b6d4" }} />
-                <span>Distributed Trace Graph</span>
+                <span>Distributed Trace Topology</span>
               </div>
               <div className="showcase-spec-item">
                 <Shield size={14} style={{ color: "#10b981" }} />
@@ -265,7 +281,7 @@ export default function LoginPage() {
 
           <div
             style={{
-              paddingTop: "var(--space-4)",
+              paddingTop: "var(--space-3)",
               borderTop: "1px solid rgba(255, 255, 255, 0.08)",
               display: "flex",
               alignItems: "center",
@@ -368,19 +384,18 @@ export default function LoginPage() {
                   disabled={submitting}
                   title="Click to instantly sign in as Administrator"
                 >
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>Admin User</span>
+                  <div className="demo-role-main">
+                    <div className="demo-role-header">
+                      <span className="demo-role-name">Admin User</span>
                       <span className="role-tag-admin">ADMIN ROLE</span>
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                      Full control: settings, purge telemetry, remediation playbooks
-                    </div>
-                    <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                      Username: <strong style={{ color: "#c4b5fd" }}>admin</strong> · Password: <strong style={{ color: "#c4b5fd" }}>Admin@LogPilot2026!</strong>
+                    <p className="demo-role-desc">Full cluster governance, automated playbooks & system configuration</p>
+                    <div className="demo-role-creds">
+                      <span className="cred-chip"><User size={10} /> admin</span>
+                      <span className="cred-chip"><Lock size={10} /> Admin@LogPilot2026!</span>
                     </div>
                   </div>
-                  <div className="demo-role-btn-pill admin">
+                  <div className="demo-role-action-pill admin">
                     <span>Launch</span>
                     <Zap size={12} />
                   </div>
@@ -394,19 +409,18 @@ export default function LoginPage() {
                   disabled={submitting}
                   title="Click to instantly sign in as Operator (Normal User)"
                 >
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>Normal User</span>
+                  <div className="demo-role-main">
+                    <div className="demo-role-header">
+                      <span className="demo-role-name">Normal User</span>
                       <span className="role-tag-normal">NORMAL ROLE</span>
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                      Observability view: live streaming, logs, traces, RCA investigation
-                    </div>
-                    <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                      Username: <strong style={{ color: "#67e8f9" }}>operator</strong> · Password: <strong style={{ color: "#67e8f9" }}>Operator@LogPilot2026!</strong>
+                    <p className="demo-role-desc">Observability view: live streaming, logs, traces & RCA investigation</p>
+                    <div className="demo-role-creds">
+                      <span className="cred-chip"><User size={10} /> operator</span>
+                      <span className="cred-chip"><Lock size={10} /> Operator@LogPilot2026!</span>
                     </div>
                   </div>
-                  <div className="demo-role-btn-pill normal">
+                  <div className="demo-role-action-pill normal">
                     <span>Launch</span>
                     <Zap size={12} />
                   </div>
@@ -463,11 +477,24 @@ export default function LoginPage() {
                   size="md"
                   loading={submitting}
                   icon={ArrowRight}
-                  style={{ width: "100%", justifyContent: "center", marginTop: 4 }}
+                  style={{ width: "100%", justifyContent: "center", marginTop: 2 }}
                 >
                   {submitting ? "Authenticating..." : "Sign In with Credentials"}
                 </Button>
               </form>
+
+              {/* Enterprise Security Callout */}
+              <div className="login-security-callout">
+                <div className="security-callout-header">
+                  <ShieldCheck size={13} style={{ color: "var(--accent-primary)" }} />
+                  <span>Enterprise-Grade Session Security</span>
+                </div>
+                <div className="security-callout-features">
+                  <span>• HMAC-SHA256 JWT Signed</span>
+                  <span>• PBKDF2 (100k Iterations)</span>
+                  <span>• Dual-Tier RBAC</span>
+                </div>
+              </div>
             </>
           )}
 
