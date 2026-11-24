@@ -4,6 +4,21 @@ import SeverityBadge from "../common/SeverityBadge";
 import CopyButton from "../common/CopyButton";
 import CodeBlock from "../common/CodeBlock";
 
+function renderMessageWithRedaction(msg) {
+  if (!msg) return "";
+  const parts = msg.split(/(\[REDACTED_[A-Z0-9_]+\])/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("[REDACTED_") && part.endsWith("]")) {
+      return (
+        <span key={index} className="redacted-badge" title="Sensitive secret masked by LogPilot AI">
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
 export default function LogRow({ log }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -67,7 +82,7 @@ export default function LogRow({ log }) {
 
         {/* Message (plain text, never dangerouslySetInnerHTML) */}
         <td className="log-cell log-cell-message">
-          <span>{log.message}</span>
+          <span>{renderMessageWithRedaction(log.message)}</span>
         </td>
 
         {/* Trace ID */}
@@ -100,6 +115,18 @@ export default function LogRow({ log }) {
                   <span style={{ color: "var(--text-muted)" }}>Source ID: </span>
                   <span className="code-font">{log.source_id || "N/A"}</span>
                 </div>
+                {log.upload_batch_id && (
+                  <div>
+                    <span style={{ color: "var(--text-muted)" }}>Batch ID: </span>
+                    <span className="code-font">{log.upload_batch_id}</span>
+                  </div>
+                )}
+                {log.line_number && (
+                  <div>
+                    <span style={{ color: "var(--text-muted)" }}>Line #: </span>
+                    <span className="code-font">{log.line_number}</span>
+                  </div>
+                )}
                 <div>
                   <span style={{ color: "var(--text-muted)" }}>Span ID: </span>
                   <span className="code-font">{log.span_id || "N/A"}</span>

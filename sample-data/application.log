@@ -1,0 +1,10 @@
+2026-11-24T10:00:01.120Z [INFO] [api-gateway] trace_id=tr-00101 span_id=sp-001 HTTP GET /api/v1/orders/10892 status=200 duration=14ms client_ip=192.168.1.104
+2026-11-24T10:00:02.435Z [INFO] [auth-service] trace_id=tr-00101 span_id=sp-002 Validated JWT bearer session token for user=usr_99812 scope=orders:read
+2026-11-24T10:00:03.189Z [INFO] [inventory-service] trace_id=tr-00101 span_id=sp-003 SKU stock verified item_id=SKU-4402 quantity=1 available=48
+2026-11-24T10:00:04.550Z [INFO] [payment-service] trace_id=tr-00102 span_id=sp-004 PaymentIntent created intent_id=pi_3N9A amount=4999 currency=USD
+2026-11-24T10:00:05.812Z [WARNING] [payment-service] trace_id=tr-00102 span_id=sp-005 PaymentGateway latency degraded provider=stripe duration=1820ms retry_count=1
+2026-11-24T10:00:06.901Z [INFO] [notification-service] trace_id=tr-00101 span_id=sp-006 Dispatched transactional confirmation email to recipient=user99812@example.com provider=smtp.internal
+2026-11-24T10:00:10.023Z [ERROR] [database-service] trace_id=tr-00103 span_id=sp-007 Connection pool capacity exhausted active_connections=100 max_connections=100 waiting_requests=42
+2026-11-24T10:00:11.144Z [CRITICAL] [payment-service] trace_id=tr-00103 span_id=sp-008 TransactionRollbackFailed: could not obtain database lock on orders_table timeout=5000ms
+2026-11-24T10:00:12.650Z [WARNING] [api-gateway] trace_id=tr-00103 span_id=sp-009 Upstream payment-service returned HTTP 503 Service Unavailable circuit_breaker=HALF_OPEN
+2026-11-24T10:00:15.890Z [INFO] [database-service] trace_id=tr-00104 span_id=sp-010 Connection pool drained dead connections pruned active_connections=18

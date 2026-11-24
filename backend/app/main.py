@@ -27,6 +27,8 @@ async def lifespan(app: FastAPI):
     try:
         init_db()
         logger.info("Database schema verified and tables initialized.")
+        from app.ingestion.ingestion_manager import IngestionManager
+        IngestionManager.recover_interrupted_jobs()
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}", exc_info=True)
     

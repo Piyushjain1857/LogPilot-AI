@@ -1,27 +1,33 @@
-# Synthetic Sample Log Dataset (LogPilot AI)
+# LogPilot AI — Synthetic Sample Datasets
 
-> **Important Notice:** This dataset contains **100% synthetic, generated logs** created solely for testing, validation, and benchmarking of LogPilot AI parsers, anomaly detectors, and correlation algorithms.
-> **DO NOT** treat these logs as real production telemetry or operational incidents.
+This directory contains verified, synthetic log datasets designed for testing Phase 3 log ingestion, parsing, duplicate detection, and sensitive data redaction.
 
-## Scenarios Covered
+> [!IMPORTANT]
+> None of these files contain real credentials, proprietary logs, or personal identifiable information (PII). All tokens, passwords, IPs, and trace IDs are strictly synthetic.
 
-1. **Normal API Requests (`api-gateway`)**:
-   - HTTP 200/201 requests, routing, and healthy payload responses.
-2. **Authentication Failures (`auth-service`)**:
-   - Expired JWT tokens, invalid client credentials, and rate-limit thresholds.
-3. **Database Connection Failures (`order-service`, `inventory-service`)**:
-   - Connection pool exhaustion, timeout connecting to read replica, retry exhaustion.
-4. **HTTP 500 & Unhandled Exceptions (`checkout-service`)**:
-   - `NullReferenceException` / `KeyError` during checkout cart calculation.
-5. **Downstream Service Timeouts (`payment-service`)**:
-   - Gateway timeout (HTTP 504) waiting for external banking provider webhook.
-6. **Deployment Events (`deploy-orchestrator`)**:
-   - Canary deployment started, health probe failure detected, automatic rollback triggered.
-7. **Recovery Events (`circuit-breaker`, `order-service`)**:
-   - Circuit breaker transition from Open to Half-Open to Closed after upstream DB recovers.
+---
 
-## Formats Provided
+## Catalog of Sample Files
 
-- `synthetic_logs.log`: Standard unstructured / RFC 5424-style plain text log file.
-- `synthetic_logs.jsonl`: Structured JSON Lines format with explicit `timestamp`, `level`, `service`, `trace_id`, and `metadata`.
-- `synthetic_logs.csv`: Comma-separated values format for tabular processing and baseline ML benchmarking.
+| Filename | Format | Description / Testing Purpose |
+|---|---|---|
+| **`application.log`** | Plain Text `.log` | Realistic standard microservices log with timestamps, severity levels, service tags, and shared trace IDs. |
+| **`server-errors.txt`** | Text `.txt` | Mixed unstructured error lines, missing timestamps, kernel OOM notices, and recovery events. |
+| **`microservices.csv`** | CSV `.csv` | Tabular logs with header columns (`timestamp`, `severity`, `service`, `message`, `trace_id`, `span_id`). |
+| **`system-events.json`** | JSON Array `.json` | Array of structured log objects with nested metadata properties. |
+| **`distributed-traces.jsonl`** | JSON Lines `.jsonl` | Line-delimited JSON events with common `trace_id` for cross-service correlation. |
+| **`multiline-stacktrace.log`** | Plain Text `.log` | Realistic Python multi-line traceback verifying that stack trace continuations are not treated as separate log records. |
+| **`mixed-valid-invalid.jsonl`** | JSON Lines `.jsonl` | Verifies graceful error recovery: valid lines are ingested while malformed lines yield `PARTIALLY_COMPLETED` status. |
+| **`redaction-test.log`** | Plain Text `.log` | Contains synthetic JWT tokens, Bearer headers, database passwords, and API keys to verify automated redaction. |
+| **`malformed.json`** | Corrupted JSON | Verifies that unparseable or truncated JSON documents are safely rejected with `FAILED` validation status. |
+| **`empty.log`** | Empty File (0 bytes) | Verifies rejection of 0-byte uploads. |
+
+---
+
+## Ingestion Instructions
+
+1. Open the LogPilot AI web console at `http://localhost:5173/app/log-sources`.
+2. Click **Upload Logs** or navigate to an existing log source.
+3. Drag and drop any of the above files or click **Browse Files**.
+4. Review the extracted structure in the **Preview & Mapping** step.
+5. Confirm import and watch real-time file upload and backend progress.

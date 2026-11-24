@@ -34,12 +34,12 @@ class SystemService:
     @staticmethod
     def get_system_capabilities() -> SystemCapabilitiesResponse:
         """
-        Truthful reflection of Phase 1 implementation vs planned future capabilities.
+        Truthful reflection of Phase 3 implementation vs planned future capabilities.
         """
         return SystemCapabilitiesResponse(
-            log_file_ingestion="planned",
+            log_file_ingestion="implemented",
             real_time_streaming="planned",
-            log_parsing="planned",
+            log_parsing="implemented",
             severity_classification="planned",
             anomaly_detection="planned",
             log_clustering="planned",

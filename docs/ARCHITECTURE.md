@@ -63,13 +63,15 @@ To maintain technical transparency, every component is classified as either **Im
 | **Frontend Shell & Design** | **Implemented** | Dark AIOps design system (#090E19, #111827), accessible contrast, responsive sidebar, breadcrumbs, backend connection indicator, clean modular CSS. |
 | **Landing Page & Routing** | **Implemented** | Complete 12-route routing table with active pages and distinct future-feature placeholders. |
 | **System Overview Dashboard** | **Implemented** | Real-time database metrics query, health status, capabilities checklist, and live backend connection state. |
-| **Drain3 Log Parser** | *Planned (Phase 2)* | Extensible interface prepared in `backend/app/parsers/`. |
-| **Log Ingestion & Upload** | *Planned (Phase 2)* | Directory structure and service hooks prepared in `backend/app/ingestion/`. |
-| **Anomaly Detection (ML)** | *Planned (Phase 2)* | Extensible service hooks prepared in `backend/app/analytics/`. |
-| **Error Clustering Engine** | *Planned (Phase 3)* | Extensible service hooks prepared in `backend/app/clustering/`. |
-| **Root Cause Correlation** | *Planned (Phase 3)* | Trace-based correlation hooks in `backend/app/correlation/`. |
-| **Gemini AI Root Cause Agent** | *Planned (Phase 4)* | Google Gen AI SDK integration hooks in `backend/app/agents/`. Safe fallback when unconfigured. |
-| **Remediation Execution** | *Planned (Phase 4)* | Playbook generation. Strict security guard: `ENABLE_REMEDIATION_EXECUTION=false` by default. |
+| **Log Ingestion & Upload** | **Implemented** | Multi-format upload pipeline (.log, .txt, .csv, .json, .jsonl), SHA-256 deduplication, 25MB limits, binary null-byte defense. |
+| **Log Parsers & Redactor** | **Implemented** | `TextLogParser` (multiline stack traces), `CSVLogParser` (auto/manual mapping), `JSONLogParser`, `JSONLLogParser`, inline secret redaction. |
+| **Upload Wizard & Explorer** | **Implemented** | 4-step upload wizard modal, live progress polling, LogSourcesPage, and LogExplorerPage with server-side pagination & filtering. |
+| **Drain3 Log Parser** | *Planned (Phase 4)* | Extensible interface prepared in `backend/app/parsers/`. |
+| **Anomaly Detection (ML)** | *Planned (Phase 5)* | Extensible service hooks prepared in `backend/app/analytics/`. |
+| **Error Clustering Engine** | *Planned (Phase 6)* | Extensible service hooks prepared in `backend/app/clustering/`. |
+| **Root Cause Correlation** | *Planned (Phase 7)* | Trace-based correlation hooks in `backend/app/correlation/`. |
+| **Gemini AI Root Cause Agent** | *Planned (Phase 8)* | Google Gen AI SDK integration hooks in `backend/app/agents/`. Safe fallback when unconfigured. |
+| **Remediation Execution** | *Planned (Phase 9)* | Playbook generation. Strict security guard: `ENABLE_REMEDIATION_EXECUTION=false` by default. |
 
 ---
 

@@ -1,0 +1,5 @@
+2026-11-24T13:00:00.000Z [INFO] [api-gateway] Request received with Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+2026-11-24T13:00:01.000Z [ERROR] [auth-service] Client authentication failed api_key=ak_live_98327498172948712 secret_key=sk_test_881928374918274
+2026-11-24T13:00:02.000Z [WARNING] [payment-service] Database connection attempt failed url=postgres://db_admin:SuperSecretPassword123!@postgres-master.internal:5432/production_db
+2026-11-24T13:00:03.000Z [INFO] [inventory-service] Service config loaded redis_auth password=MySuperSecretRedisPassword992
+2026-11-24T13:00:04.000Z [ERROR] [notification-service] Generic header parsed: Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQxMjM=

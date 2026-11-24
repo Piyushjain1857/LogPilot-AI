@@ -1,0 +1,9 @@
+timestamp,severity,service,message,trace_id,span_id,client_ip
+2026-11-24T10:30:15Z,INFO,api-gateway,Incoming request routed to checkout-service,tr-9001,sp-101,10.0.1.12
+2026-11-24T10:30:16Z,INFO,auth-service,Bearer token validated successfully,tr-9001,sp-102,10.0.1.12
+2026-11-24T10:30:17Z,WARNING,inventory-service,Inventory stock for item SKU-990 is below threshold 5,tr-9001,sp-103,10.0.1.15
+2026-11-24T10:30:18Z,ERROR,payment-service,Stripe API returned 402 Card Declined code=insufficient_funds,tr-9001,sp-104,10.0.1.20
+2026-11-24T10:30:19Z,CRITICAL,database-service,PostgreSQL query execution cancelled due to statement timeout (30000ms),tr-9002,sp-105,10.0.2.8
+2026-11-24T10:30:20Z,INFO,notification-service,Order failure notification pushed to user mobile app,tr-9001,sp-106,10.0.3.4
+2026-11-24T10:30:22Z,DEBUG,api-gateway,Upstream headers response_time=1220ms status=402,tr-9001,sp-107,10.0.1.12
+2026-11-24T10:30:25Z,INFO,database-service,WAL checkpoint completed processed_buffers=1420 duration=120ms,tr-9003,sp-108,10.0.2.8

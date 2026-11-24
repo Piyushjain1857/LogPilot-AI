@@ -16,9 +16,12 @@ class LogSource(Base):
     name = Column(String(128), nullable=False)
     source_type = Column(String(64), nullable=False)  # file, api, stream, syslog, agent
     service_name = Column(String(128), nullable=False, index=True)
+    description = Column(Text, nullable=True)
     status = Column(String(32), nullable=False, default="active")  # active, inactive, paused
     configuration_json = Column(Text, nullable=True)
+    last_ingested_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
     logs = relationship("LogEntry", back_populates="source", cascade="all, delete-orphan")
+    upload_batches = relationship("UploadBatch", back_populates="source", cascade="all, delete-orphan")

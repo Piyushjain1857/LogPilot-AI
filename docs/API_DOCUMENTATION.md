@@ -225,6 +225,80 @@ All responses include standard diagnostic headers:
 
 ---
 
+### 12. Log File Ingestion Preview
+- **Route:** `POST /api/v1/uploads/preview`
+- **Content-Type:** `multipart/form-data`
+- **Description:** Previews the first 50 log lines, detects file columns, suggests field mappings, and redacts sensitive credentials without writing to database.
+- **Form Parameters:** `file` (File), `encoding` (optional string), `field_mappings` (optional JSON string).
+- **Response 200 OK:** `UploadPreviewResponse`.
+
+---
+
+### 13. Create Log File Ingestion Batch
+- **Route:** `POST /api/v1/uploads`
+- **Content-Type:** `multipart/form-data`
+- **Description:** Uploads a log file (.log, .txt, .csv, .json, .jsonl), calculates SHA-256 fingerprint, and enqueues background parsing.
+- **Form Parameters:** `file` (File), `source_id` (string), `default_service` (optional string), `field_mappings` (optional JSON), `confirm_duplicate` (boolean).
+- **Response 202 Accepted:** `UploadBatchResponse` (Status: `PENDING` or `PROCESSING`).
+
+---
+
+### 14. List Upload Batches
+- **Route:** `GET /api/v1/uploads`
+- **Query Parameters:** `limit` (int, default 50), `offset` (int, default 0), `status` (optional string), `source_id` (optional string).
+- **Response 200 OK:** Array of `UploadBatchResponse`.
+
+---
+
+### 15. Get Upload Batch Status
+- **Route:** `GET /api/v1/uploads/{batch_id}`
+- **Description:** Retrieves real-time status and parsing metrics (total, processed, successful, failed, redacted records, duration).
+- **Response 200 OK:** `UploadBatchResponse`.
+
+---
+
+### 16. Get Upload Batch Errors
+- **Route:** `GET /api/v1/uploads/{batch_id}/errors`
+- **Description:** Returns line-by-line parsing errors and raw excerpts for diagnostics.
+- **Response 200 OK:** `{"batch_id": "...", "errors": [...]}`.
+
+---
+
+### 17. Cancel Upload Batch
+- **Route:** `POST /api/v1/uploads/{batch_id}/cancel`
+- **Description:** Cooperatively terminates active background ingestion for a batch.
+- **Response 200 OK:** `{"message": "Ingestion job cancellation requested", "batch_id": "...", "status": "CANCELLED"}`.
+
+---
+
+### 18. List Log Sources
+- **Route:** `GET /api/v1/log-sources`
+- **Description:** Lists all registered log telemetry sources.
+- **Response 200 OK:** Array of `LogSourceResponse`.
+
+---
+
+### 19. Create Log Source
+- **Route:** `POST /api/v1/log-sources`
+- **Request Body:** `LogSourceCreate` (`name`, `source_type`, `service_name`, `description`).
+- **Response 201 Created:** `LogSourceResponse`.
+
+---
+
+### 20. Query Logs Explorer
+- **Route:** `GET /api/v1/logs`
+- **Query Parameters:** `source_id`, `upload_batch_id`, `severity`, `service_name`, `search`, `page` (default 1), `page_size` (default 50).
+- **Response 200 OK:** `LogListResponse` with `items`, `total`, `page`, `page_size`, `total_pages`.
+
+---
+
+### 21. Get Log Entry Detail
+- **Route:** `GET /api/v1/logs/{log_id}`
+- **Description:** Returns full redacted detail for a single log record.
+- **Response 200 OK:** `LogEntryResponse`.
+
+---
+
 ## Standard Error Response Format
 All 4xx and 5xx responses conform to a unified error schema:
 ```json

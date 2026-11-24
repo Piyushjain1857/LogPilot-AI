@@ -1,0 +1,6 @@
+{"timestamp": "2026-11-24T11:30:00.100Z", "level": "INFO", "service": "api-gateway", "message": "Inbound POST /checkout/commit", "trace_id": "trace-dt-101", "span_id": "sp-01"}
+{"timestamp": "2026-11-24T11:30:00.150Z", "level": "INFO", "service": "auth-service", "message": "Extracted bearer claims for tenant id=corp_99", "trace_id": "trace-dt-101", "span_id": "sp-02"}
+{"timestamp": "2026-11-24T11:30:00.220Z", "level": "INFO", "service": "inventory-service", "message": "Locked 3 items for order id=ord_881", "trace_id": "trace-dt-101", "span_id": "sp-03"}
+{"timestamp": "2026-11-24T11:30:01.050Z", "level": "ERROR", "service": "payment-service", "message": "Gateway timeout connecting to provider merchant_id=m_8819", "trace_id": "trace-dt-101", "span_id": "sp-04"}
+{"timestamp": "2026-11-24T11:30:01.120Z", "level": "ERROR", "service": "database-service", "message": "Aborting transaction tx=99801 due to caller cancellation", "trace_id": "trace-dt-101", "span_id": "sp-05"}
+{"timestamp": "2026-11-24T11:30:01.200Z", "level": "WARNING", "service": "notification-service", "message": "Enqueued failure notification retry count=1", "trace_id": "trace-dt-101", "span_id": "sp-06"}

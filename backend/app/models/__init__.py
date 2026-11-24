@@ -1,5 +1,6 @@
 from app.models.source import LogSource
 from app.models.log import LogEntry
+from app.models.upload_batch import UploadBatch
 from app.models.cluster import LogCluster
 from app.models.incident import Incident, IncidentLog
 from app.models.analysis import AnalysisRun
@@ -10,6 +11,7 @@ from app.models.preference import WorkspacePreference
 __all__ = [
     "LogSource",
     "LogEntry",
+    "UploadBatch",
     "LogCluster",
     "Incident",
     "IncidentLog",

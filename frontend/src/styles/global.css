@@ -1,4 +1,5 @@
 @import './variables.css';
+@import './ingestion.css';
 
 *, *::before, *::after {
   box-sizing: border-box;

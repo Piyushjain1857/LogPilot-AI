@@ -1,0 +1,12 @@
+2026-11-24T12:00:00.120Z [INFO] [api-gateway] Request received POST /api/v1/charge trace_id=tr-traceback-01
+2026-11-24T12:00:01.450Z [ERROR] [payment-service] Unhandled exception occurred during payment orchestration trace_id=tr-traceback-01
+Traceback (most recent call last):
+  File "/app/services/payment_orchestrator.py", line 142, in process_charge
+    account = self.vault_client.fetch_customer_account(customer_id)
+  File "/app/clients/vault.py", line 58, in fetch_customer_account
+    response = requests.get(f"{self.base_url}/accounts/{customer_id}", timeout=5)
+  File "/usr/local/lib/python3.12/site-packages/requests/api.py", line 73, in get
+    return request("get", url, params=params, **kwargs)
+requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='vault.internal.corp', port=8443): Max retries exceeded with url: /accounts/cust_9921 (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x108>, 'Connection to vault.internal.corp timed out. (connect timeout=5)'))
+2026-11-24T12:00:02.100Z [WARNING] [api-gateway] Returning HTTP 504 Gateway Timeout to client trace_id=tr-traceback-01
+2026-11-24T12:00:03.010Z [INFO] [notification-service] Sending circuit breaker trip notification to slack channel #platform-alerts

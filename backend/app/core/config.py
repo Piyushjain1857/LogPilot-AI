@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     
     # Security and Upload
     MAX_UPLOAD_SIZE_MB: int = 25
+    MAX_UPLOAD_RECORDS: int = 100000
+    MAX_UPLOAD_FILES: int = 5
+    MAX_LOG_MESSAGE_BYTES: int = 32768
+    MAX_PREVIEW_RECORDS: int = 50
+    MAX_INGESTION_ERRORS: int = 100
+    INGESTION_BATCH_SIZE: int = 500
+    MAX_CONCURRENT_INGESTION_JOBS: int = 2
+    UPLOAD_TEMP_DIRECTORY: str = "storage/uploads"
+    ENABLE_SECRET_REDACTION: bool = True
     LOG_LEVEL: str = "INFO"
     ENABLE_REMEDIATION_EXECUTION: bool = False
 

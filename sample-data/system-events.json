@@ -1,0 +1,41 @@
+[
+  {
+    "timestamp": "2026-11-24T11:00:00Z",
+    "level": "INFO",
+    "service": "api-gateway",
+    "message": "Deployment canary v2.4.1 started with 10% traffic allocation",
+    "trace_id": "dep-001"
+  },
+  {
+    "timestamp": "2026-11-24T11:00:05Z",
+    "level": "INFO",
+    "service": "auth-service",
+    "message": "Key rotation completed for RS256 token signing authority",
+    "trace_id": "dep-001"
+  },
+  {
+    "timestamp": "2026-11-24T11:00:10Z",
+    "level": "WARNING",
+    "service": "payment-service",
+    "message": "Circuit breaker transitioned from CLOSED to HALF_OPEN",
+    "trace_id": "dep-002"
+  },
+  {
+    "timestamp": "2026-11-24T11:00:15Z",
+    "level": "ERROR",
+    "service": "database-service",
+    "message": "Disk I/O utilization reached 98% on /data partition",
+    "trace_id": "dep-003",
+    "metadata": {
+      "mount": "/var/lib/postgresql/data",
+      "available_bytes": 104857600
+    }
+  },
+  {
+    "timestamp": "2026-11-24T11:00:20Z",
+    "level": "CRITICAL",
+    "service": "inventory-service",
+    "message": "Replication lag exceeded critical threshold: 142.5 seconds behind primary",
+    "trace_id": "dep-003"
+  }
+]

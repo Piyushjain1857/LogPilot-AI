@@ -121,4 +121,8 @@ export const updatePreferences = async (data, signal) => {
   return response.data;
 };
 
+export { uploadService } from "./uploadService";
+export { logSourceService } from "./logSourceService";
+export { logService } from "./logService";
+
 export default apiClient;

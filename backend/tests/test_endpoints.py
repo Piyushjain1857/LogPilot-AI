@@ -36,7 +36,8 @@ def test_system_capabilities_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     assert data["incident_management"] == "implemented"
-    assert data["log_file_ingestion"] == "planned"
+    assert data["log_file_ingestion"] == "implemented"
+    assert data["log_parsing"] == "implemented"
     assert data["anomaly_detection"] == "planned"
     assert data["ai_troubleshooting"] == "planned"
 

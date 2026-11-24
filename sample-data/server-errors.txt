@@ -1,0 +1,9 @@
+2026-11-24 10:15:00 [CRITICAL] database-service: FATAL: remaining connection slots are reserved for non-replication superuser connections
+2026-11-24 10:15:01 [ERROR] payment-service: Timeout while waiting for connection pool lease after 30000ms
+2026-11-24 10:15:02 [ERROR] auth-service: Redis session cache connection refused host=redis-primary.internal:6379
+2026-11-24 10:15:05 [WARNING] api-gateway: Upstream endpoint /v1/checkout failing health checks, consecutive_failures=3
+2026-11-24 10:15:10 [ERROR] inventory-service: Deadlock detected between transactions tx=4491 and tx=4493 on table item_reservations
+2026-11-24 10:15:12 [CRITICAL] notification-service: Worker pool crashed with unhandled SIGTERM while consuming queue notifications_p0
+Unstructured runtime diagnostic line without timestamp or service tag: system kernel reported high memory pressure on node k8s-worker-04
+Unstructured error continuation line: cgroup out of memory: killed process 18241 (payment-worker)
+2026-11-24 10:15:20 [INFO] database-service: PostgreSQL primary recovered gracefully, ready to accept client connections

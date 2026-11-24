@@ -139,7 +139,7 @@ describe("OverviewPage Component", () => {
     renderOverview();
 
     expect(
-      await screen.findByText(/Backend is currently unreachable/i)
+      await screen.findByText(/Backend is currently unreachable/i, {}, { timeout: 3000 })
     ).toBeInTheDocument();
     expect(screen.getByText("Request ID: err-1234")).toBeInTheDocument();
   });

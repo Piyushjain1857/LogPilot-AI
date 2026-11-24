@@ -1,0 +1,6 @@
+{"timestamp": "2026-11-24T12:30:00Z", "level": "INFO", "service": "api-gateway", "message": "Valid event record 1"}
+{"timestamp": "2026-11-24T12:30:01Z", "level": "ERROR", "service": "auth-service", "message": "Valid event record 2"}
+CORRUPTED_RAW_TEXT_THAT_IS_NOT_VALID_JSON_ON_LINE_3
+{"timestamp": "2026-11-24T12:30:03Z", "level": "WARNING", "service": "inventory-service", "message": "Valid event record 3"}
+{"malformed_json_unclosed_string: "missing_quote}
+{"timestamp": "2026-11-24T12:30:05Z", "level": "CRITICAL", "service": "database-service", "message": "Valid event record 4"}

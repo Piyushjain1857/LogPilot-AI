@@ -1,164 +1,277 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import PageHeader from "../../components/common/PageHeader";
-import Button from "../../components/common/Button";
-import Badge from "../../components/common/Badge";
-import StatusBadge from "../../components/common/StatusBadge";
-import Modal from "../../components/common/Modal";
-import DataTable from "../../components/common/DataTable";
-import CodeBlock from "../../components/common/CodeBlock";
-import { Server, Plus, Upload, Radio } from "lucide-react";
+import Tabs from "../../components/common/Tabs";
+import {
+  LogSourceTable,
+  UploadHistoryTable,
+  UploadWizard,
+  LogSourceModal,
+  UploadErrorDrawer,
+} from "../../components/ingestion";
+import { logSourceService } from "../../services/logSourceService";
+import { uploadService } from "../../services/uploadService";
+import { UploadCloud, Plus, RefreshCw, Database, ShieldAlert, FileText } from "lucide-react";
 
 export default function LogSourcesPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("file");
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("sources");
 
-  // Configured sources list
-  const sources = [
-    {
-      id: "src-1",
-      name: "API Gateway Cluster",
-      source_type: "HTTP Stream",
-      service_name: "api-gateway",
-      status: "active",
-      health: "healthy",
-      last_seen: "2026-11-24 10:00:01",
-    },
-    {
-      id: "src-2",
-      name: "Order Processing Service",
-      source_type: "Container Log",
-      service_name: "order-service",
-      status: "active",
-      health: "degraded",
-      last_seen: "2026-11-24 10:00:28",
-    },
-    {
-      id: "src-3",
-      name: "PostgreSQL Database Logs",
-      source_type: "Database Log",
-      service_name: "db-primary",
-      status: "active",
-      health: "healthy",
-      last_seen: "2026-11-24 10:00:30",
-    },
-  ];
+  // Data states
+  const [sources, setSources] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [isLoadingSources, setIsLoadingSources] = useState(true);
+  const [isLoadingBatches, setIsLoadingBatches] = useState(true);
+  const [error, setError] = useState(null);
 
-  const columns = [
-    { key: "name", label: "Source Name" },
-    { key: "service_name", label: "Service Identifier", render: (v) => <span className="code-font">{v}</span> },
-    { key: "source_type", label: "Type", render: (v) => <Badge variant="default">{v}</Badge> },
-    { key: "status", label: "Status", render: (v) => <StatusBadge status={v} /> },
-    { key: "health", label: "Health", render: (v) => <StatusBadge status={v} /> },
-    { key: "last_seen", label: "Last Ingested", render: (v) => <span className="code-font" style={{ fontSize: 11 }}>{v}</span> },
+  // Modals state
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [wizardSourceId, setWizardSourceId] = useState(null);
+  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const [editingSource, setEditingSource] = useState(null);
+  const [errorDrawerBatch, setErrorDrawerBatch] = useState(null);
+
+  const fetchSources = useCallback(async () => {
+    setIsLoadingSources(true);
+    try {
+      const data = await logSourceService.listSources();
+      setSources(data || []);
+      setError(null);
+    } catch (err) {
+      setError(err.details || err.message || "Failed to load log sources.");
+    } finally {
+      setIsLoadingSources(false);
+    }
+  }, []);
+
+  const fetchBatches = useCallback(async () => {
+    setIsLoadingBatches(true);
+    try {
+      const data = await uploadService.listBatches({ limit: 50 });
+      setBatches(data || []);
+    } catch (err) {
+      console.error("Failed to load upload batches:", err);
+    } finally {
+      setIsLoadingBatches(false);
+    }
+  }, []);
+
+  const refreshAll = useCallback(() => {
+    fetchSources();
+    fetchBatches();
+  }, [fetchSources, fetchBatches]);
+
+  useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
+
+  // Aggregate metrics
+  const totalIngestedRecords = batches.reduce((sum, b) => sum + (b.successful_records || 0), 0);
+  const totalRedactedSecrets = batches.reduce((sum, b) => sum + (b.redacted_records || 0), 0);
+  const activeBatchesCount = batches.filter((b) => b.status === "PROCESSING" || b.status === "PENDING").length;
+
+  const handleUploadForSource = (source) => {
+    setWizardSourceId(source.id);
+    setIsWizardOpen(true);
+  };
+
+  const handleEditSource = (source) => {
+    setEditingSource(source);
+    setIsSourceModalOpen(true);
+  };
+
+  const handleExploreBatchLogs = (batch) => {
+    navigate(`/app/log-explorer?batch_id=${batch.id}`);
+  };
+
+  const handleViewBatchErrors = (batch) => {
+    setErrorDrawerBatch(batch);
+  };
+
+  const handleCancelBatch = async (batchId) => {
+    try {
+      await uploadService.cancelBatch(batchId);
+      fetchBatches();
+    } catch (err) {
+      console.error("Failed to cancel batch:", err);
+    }
+  };
+
+  const tabsConfig = [
+    { id: "sources", label: `Configured Sources (${sources.length})` },
+    { id: "history", label: `Upload Batches (${batches.length})` },
   ];
 
   return (
-    <div>
+    <div className="page-container" style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+      {/* Page Header */}
       <PageHeader
-        title="Log Sources"
-        description="Configure and manage telemetry ingestion sources across microservices, files, and agents."
-        badge={<Badge variant="primary" icon={Server}>3 Configured</Badge>}
+        title="Log Sources & Telemetry Ingestion"
+        subtitle="Configure system log sources, ingest multi-format files, and audit background parsing telemetry."
         actions={
-          <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalOpen(true)}>
-            Add Log Source
-          </Button>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={refreshAll} title="Refresh Sources">
+              <RefreshCw size={14} /> Refresh
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                setEditingSource(null);
+                setIsSourceModalOpen(true);
+              }}
+            >
+              <Plus size={14} /> Add Source
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                setWizardSourceId(null);
+                setIsWizardOpen(true);
+              }}
+            >
+              <UploadCloud size={14} /> Upload Log File
+            </button>
+          </div>
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={sources}
-        totalItems={sources.length}
-      />
-
-      {/* Add Source Modal */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Connect New Log Source"
-        maxWidth="560px"
-      >
-        <div style={{ display: "flex", gap: "var(--space-2)", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "var(--space-3)", marginBottom: "var(--space-4)" }}>
-          <button
-            type="button"
-            className={`btn btn-xs ${activeTab === "file" ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setActiveTab("file")}
-          >
-            <Upload size={12} /> File Upload
-          </button>
-          <button
-            type="button"
-            className={`btn btn-xs ${activeTab === "api" ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setActiveTab("api")}
-          >
-            <Radio size={12} /> HTTP Webhook
-          </button>
-          <button
-            type="button"
-            className={`btn btn-xs ${activeTab === "agent" ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setActiveTab("agent")}
-          >
-            <Server size={12} /> Server Daemon
-          </button>
+      {/* KPI Overview Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "var(--space-4)" }}>
+        <div className="card" style={{ padding: "var(--space-4)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>
+              Active Sources
+            </span>
+            <Database size={16} color="var(--accent-primary)" />
+          </div>
+          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--text-primary)" }}>
+            {sources.length}
+          </div>
+          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
+            Configured telemetry endpoints
+          </div>
         </div>
 
-        {activeTab === "file" && (
-          <div>
-            <div
-              style={{
-                border: "2px dashed var(--border-strong)",
-                borderRadius: "var(--radius-lg)",
-                padding: "var(--space-8) var(--space-4)",
-                textAlign: "center",
-                backgroundColor: "var(--bg-input)",
-                marginBottom: "var(--space-4)",
-              }}
-            >
-              <Upload size={32} style={{ color: "var(--accent-primary)", marginBottom: "var(--space-2)" }} />
-              <div style={{ fontWeight: 600, fontSize: "var(--text-body)", color: "var(--text-primary)" }}>
-                Drag and drop log files here
-              </div>
-              <p style={{ fontSize: "var(--text-caption)", color: "var(--text-muted)", marginTop: 4 }}>
-                Supports Plain Text (.log), JSON Lines (.jsonl), and CSV format up to 25MB.
-              </p>
-            </div>
-            <p style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)" }}>
-              Uploaded logs are sanitized automatically via the built-in <code>SensitiveDataRedactor</code> before storage.
-            </p>
+        <div className="card" style={{ padding: "var(--space-4)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>
+              Total Logs Ingested
+            </span>
+            <FileText size={16} color="var(--status-success)" />
           </div>
-        )}
+          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--status-success)" }}>
+            {totalIngestedRecords.toLocaleString()}
+          </div>
+          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
+            Across all processed batches
+          </div>
+        </div>
 
-        {activeTab === "api" && (
-          <div>
-            <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-3)" }}>
-              Stream logs directly to LogPilot AI using the HTTP ingestion endpoint:
-            </p>
-            <CodeBlock
-              language="bash"
-              title="HTTP INGESTION CURL"
-              code={`curl -X POST http://127.0.0.1:8000/api/v1/ingest/logs \\
-  -H "Content-Type: application/json" \\
-  -d '{"service": "payment-service", "level": "ERROR", "message": "Connection timeout"}'`}
-            />
+        <div className="card" style={{ padding: "var(--space-4)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>
+              Upload Batches
+            </span>
+            <UploadCloud size={16} color="var(--accent-secondary)" />
           </div>
-        )}
+          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--text-primary)" }}>
+            {batches.length}
+          </div>
+          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
+            {activeBatchesCount > 0 ? `${activeBatchesCount} processing now` : "All batches completed"}
+          </div>
+        </div>
 
-        {activeTab === "agent" && (
-          <div>
-            <p style={{ fontSize: "var(--text-body-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-3)" }}>
-              Run the LogPilot lightweight syslog forwarder daemon on your servers:
-            </p>
-            <CodeBlock
-              language="bash"
-              title="DOCKER LOG AGENT"
-              code={`docker run -d --name logpilot-agent \\
-  -v /var/log:/var/log:ro \\
-  -e LOGPILOT_BACKEND="http://127.0.0.1:8000" \\
-  logpilot/agent:latest`}
-            />
+        <div className="card" style={{ padding: "var(--space-4)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>
+              Redacted Secrets
+            </span>
+            <ShieldAlert size={16} color="var(--status-warning)" />
           </div>
-        )}
-      </Modal>
+          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--status-warning)" }}>
+            {totalRedactedSecrets.toLocaleString()}
+          </div>
+          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
+            Tokens, passwords, & JWTs masked
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ padding: "var(--space-3)", backgroundColor: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", color: "var(--status-error)", fontSize: "var(--text-caption)" }}>
+          {error}
+        </div>
+      )}
+
+      {/* Main Tabs Container */}
+      <div className="card" style={{ padding: "var(--space-4)" }}>
+        <Tabs tabs={tabsConfig} activeTab={activeTab} onChange={setActiveTab} />
+
+        <div style={{ marginTop: "var(--space-4)" }}>
+          {activeTab === "sources" && (
+            <LogSourceTable
+              sources={sources}
+              isLoading={isLoadingSources}
+              onUploadForSource={handleUploadForSource}
+              onEditSource={handleEditSource}
+            />
+          )}
+
+          {activeTab === "history" && (
+            <UploadHistoryTable
+              batches={batches}
+              isLoading={isLoadingBatches}
+              onViewLogs={handleExploreBatchLogs}
+              onViewErrors={handleViewBatchErrors}
+              onCancelBatch={handleCancelBatch}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Upload Wizard Modal */}
+      <UploadWizard
+        isOpen={isWizardOpen}
+        onClose={() => {
+          setIsWizardOpen(false);
+          refreshAll();
+        }}
+        initialSourceId={wizardSourceId}
+        onIngestionComplete={() => {
+          refreshAll();
+        }}
+        onExploreLogs={(batch) => {
+          setIsWizardOpen(false);
+          handleExploreBatchLogs(batch);
+        }}
+        onViewErrors={(batch) => {
+          setErrorDrawerBatch(batch);
+        }}
+      />
+
+      {/* Add / Edit Source Modal */}
+      <LogSourceModal
+        isOpen={isSourceModalOpen}
+        onClose={() => {
+          setIsSourceModalOpen(false);
+          setEditingSource(null);
+        }}
+        onSuccess={() => {
+          fetchSources();
+        }}
+        existingSource={editingSource}
+      />
+
+      {/* Error Inspection Drawer */}
+      <UploadErrorDrawer
+        isOpen={Boolean(errorDrawerBatch)}
+        onClose={() => setErrorDrawerBatch(null)}
+        batchId={errorDrawerBatch?.id}
+        filename={errorDrawerBatch?.original_filename}
+      />
     </div>
   );
 }
