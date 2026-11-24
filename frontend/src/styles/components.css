@@ -1533,6 +1533,124 @@ select option {
   color: var(--text-secondary);
 }
 
+/* ==========================================================================
+   Homepage & Landing Page Presentation Styles
+   ========================================================================== */
+.landing-gradient-text {
+  background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 50%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.landing-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--accent-primary-alpha);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  box-shadow: 0 0 15px var(--accent-primary-alpha);
+  transition: all var(--transition-fast);
+}
+
+.landing-metric-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  max-width: 1040px;
+  margin: var(--space-8) auto 0;
+  padding: var(--space-4);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.landing-metric-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.landing-metric-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background-color: var(--accent-primary-alpha);
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.landing-metric-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-metric-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.landing-metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.landing-interactive-console {
+  max-width: 1040px;
+  margin: var(--space-10) auto 0;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-dropdown);
+  overflow: hidden;
+  text-align: left;
+}
+
+.landing-capability-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-capability-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.landing-workflow-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.landing-workflow-card:hover {
+  border-color: var(--border-muted);
+}
+
 /* Responsive Media Queries */
 @media (max-width: 1024px) {
   .sidebar {
