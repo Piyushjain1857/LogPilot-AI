@@ -166,5 +166,7 @@ export { logSourceService } from "./logSourceService";
 export { logService } from "./logService";
 export { reportService } from "./reportService";
 export { assistantService } from "./assistantService";
+export { demoService } from "./demoService";
+export { securityService } from "./securityService";
 
 export default apiClient;

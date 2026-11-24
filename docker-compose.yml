@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  logpilot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: logpilot-ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=LogPilot AI
+      - APP_ENV=production
+      - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=sqlite:///./storage/logpilot.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=gemini-2.5-flash
+      - ENABLE_REMEDIATION_EXECUTION=true
+      - ENABLE_REALTIME_INGESTION=true
+      - ENABLE_WEBSOCKET_STREAMING=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - logpilot-data:/app/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Optional synthetic telemetry generator service
+  logpilot-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: logpilot-simulator
+    profiles: ["simulator"]
+    depends_on:
+      logpilot-app:
+        condition: service_healthy
+    command: ["python", "simulators/microservice_simulator.py", "--url", "http://logpilot-app:8000", "--scenario", "normal", "--rate", "5"]
+    environment:
+      - SERVER_URL=http://logpilot-app:8000
+
+volumes:
+  logpilot-data:
+    driver: local

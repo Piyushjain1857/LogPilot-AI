@@ -19,6 +19,7 @@ import TroubleshooterPage from "./pages/placeholders/TroubleshooterPage";
 import AIAssistantPage from "./pages/placeholders/AIAssistantPage";
 import RemediationPage from "./pages/placeholders/RemediationPage";
 import ReportsPage from "./pages/placeholders/ReportsPage";
+import DemoPage from "./pages/placeholders/DemoPage";
 import SettingsPage from "./pages/placeholders/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -54,6 +55,7 @@ export default function App() {
               <Route path="assistant" element={<AIAssistantPage />} />
               <Route path="remediation" element={<RemediationPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="demo" element={<DemoPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
 

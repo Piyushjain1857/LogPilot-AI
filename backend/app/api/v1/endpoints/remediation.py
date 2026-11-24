@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.core.rbac import require_role, Role
 from app.services.remediation_service import remediation_service, SecurityError
 from app.schemas.remediation import (
     PlaybookResponse,
@@ -99,7 +100,12 @@ def recommend_playbooks(request: RecommendRequest, db: Session = Depends(get_db)
 
 
 @router.post("/playbooks/{playbook_id}/approve", response_model=PlaybookResponse)
-def approve_step(playbook_id: str, request: StepApprovalRequest, db: Session = Depends(get_db)):
+def approve_step(
+    playbook_id: str,
+    request: StepApprovalRequest,
+    db: Session = Depends(get_db),
+    user: Dict[str, Any] = Depends(require_role(Role.ADMIN.value)),
+):
     """Toggles human-in-the-loop approval gate for a specific playbook step."""
     try:
         updated_playbook = remediation_service.update_step_approval(
@@ -116,7 +122,12 @@ def approve_step(playbook_id: str, request: StepApprovalRequest, db: Session = D
 
 
 @router.post("/playbooks/{playbook_id}/simulate", response_model=SimulationResponse)
-def simulate_playbook(playbook_id: str, request: SimulationRequest, db: Session = Depends(get_db)):
+def simulate_playbook(
+    playbook_id: str,
+    request: SimulationRequest,
+    db: Session = Depends(get_db),
+    user: Dict[str, Any] = Depends(require_role(Role.ADMIN.value)),
+):
     """Executes safe dry-run simulation of approved steps in the sandbox environment."""
     try:
         res = remediation_service.simulate_playbook(
@@ -133,7 +144,12 @@ def simulate_playbook(playbook_id: str, request: SimulationRequest, db: Session 
 
 
 @router.post("/playbooks/{playbook_id}/rollback", response_model=RollbackResponse)
-def rollback_playbook(playbook_id: str, request: RollbackRequest, db: Session = Depends(get_db)):
+def rollback_playbook(
+    playbook_id: str,
+    request: RollbackRequest,
+    db: Session = Depends(get_db),
+    user: Dict[str, Any] = Depends(require_role(Role.ADMIN.value)),
+):
     """Executes compensating rollback actions for previously simulated/completed steps."""
     try:
         res = remediation_service.rollback_playbook(

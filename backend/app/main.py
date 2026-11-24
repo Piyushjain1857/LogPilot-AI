@@ -174,3 +174,36 @@ async def websocket_logs_endpoint(websocket: WebSocket):
         logger.debug(f"WebSocket client loop ended for {client_id}: {e}")
         await ws_manager.disconnect(client_id)
 
+
+# Optional Single-Page Application (SPA) Production Static Mount
+import os
+from starlette.staticfiles import StaticFiles
+from starlette.responses import FileResponse
+
+_possible_dist_paths = [
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../frontend/dist")),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../frontend/dist")),
+    "/app/frontend/dist",
+]
+_frontend_dist = next((p for p in _possible_dist_paths if os.path.exists(p)), None)
+
+if _frontend_dist:
+    _assets_dir = os.path.join(_frontend_dist, "assets")
+    if os.path.exists(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="spa-assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa_frontend(request: Request, full_path: str):
+        if (
+            full_path.startswith("api/")
+            or full_path.startswith("docs")
+            or full_path.startswith("openapi.json")
+            or full_path.startswith("redoc")
+            or full_path.startswith("ws/")
+        ):
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        index_path = os.path.join(_frontend_dist, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        raise StarletteHTTPException(status_code=404, detail="SPA index not found")
+

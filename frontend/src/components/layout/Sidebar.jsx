@@ -14,6 +14,7 @@ import {
   FileText,
   Settings,
   Terminal,
+  Play,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -52,6 +53,7 @@ const NAVIGATION_GROUPS = [
   {
     title: "WORKSPACE",
     items: [
+      { path: "/app/demo", label: "7-Stage Live Demo", icon: Play, badge: "DEMO", badgeVariant: "success" },
       { path: "/app/settings", label: "Settings", icon: Settings },
     ],
   },
