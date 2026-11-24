@@ -82,6 +82,14 @@
   opacity: 0.9;
 }
 
+/* Page Container & Layout Utilities */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
 /* Card Hierarchy */
 .card {
   background-color: var(--bg-surface);
@@ -91,6 +99,26 @@
   display: flex;
   flex-direction: column;
   transition: border-color var(--transition-fast), background-color var(--transition-normal);
+}
+
+/* Filter & Search Toolbar */
+.filter-toolbar {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.filter-toolbar:hover {
+  border-color: var(--border-strong);
 }
 
 .card-elevated {
@@ -526,7 +554,15 @@
 }
 
 /* Inputs & Form Controls */
-.input-field {
+.input-field,
+.input,
+.form-control,
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea {
   width: 100%;
   height: 36px;
   padding: 0 var(--space-3);
@@ -535,13 +571,117 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   outline: none;
+  font-family: inherit;
   font-size: var(--text-body-sm);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
 }
 
-.input-field:focus {
+.input-field:hover,
+.input:hover,
+.form-control:hover,
+input[type="text"]:hover,
+input[type="search"]:hover,
+textarea:hover {
+  border-color: var(--border-strong);
+}
+
+.input-field:focus,
+.input:focus,
+.form-control:focus,
+input[type="text"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 2px var(--accent-primary-alpha);
+  background-color: var(--bg-surface);
+}
+
+.input-field::placeholder,
+.input::placeholder,
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.input-field:disabled,
+.input:disabled,
+.form-control:disabled,
+input:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--bg-elevated);
+}
+
+/* Input Size Modifiers */
+.input-xs, .form-control-xs { height: 26px; padding: 0 var(--space-2); font-size: var(--text-micro); border-radius: var(--radius-xs); }
+.input-sm, .form-control-sm { height: 32px; padding: 0 var(--space-3); font-size: var(--text-caption); border-radius: var(--radius-sm); }
+.input-md, .form-control-md { height: 36px; padding: 0 var(--space-3); font-size: var(--text-body-sm); }
+.input-lg, .form-control-lg { height: 44px; padding: 0 var(--space-4); font-size: var(--text-body); border-radius: var(--radius-lg); }
+
+/* Select Dropdown Styling */
+select,
+.select,
+select.form-control,
+select.input-field,
+.field-mapping-select {
+  height: 36px;
+  padding: 0 32px 0 var(--space-3);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  outline: none;
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238492A6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+select:hover,
+.select:hover,
+select.form-control:hover,
+select.input-field:hover,
+.field-mapping-select:hover {
+  border-color: var(--border-strong);
+}
+
+select:focus,
+.select:focus,
+select.form-control:focus,
+select.input-field:focus,
+.field-mapping-select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--accent-primary-alpha);
+}
+
+select:disabled,
+.select:disabled,
+select.form-control:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--bg-elevated);
+}
+
+.select-xs { height: 26px; padding: 0 24px 0 var(--space-2); font-size: var(--text-micro); border-radius: var(--radius-xs); }
+.select-sm { height: 32px; padding: 0 28px 0 var(--space-3); font-size: var(--text-caption); border-radius: var(--radius-sm); }
+.select-md { height: 36px; padding: 0 32px 0 var(--space-3); font-size: var(--text-body-sm); }
+.select-lg { height: 44px; padding: 0 36px 0 var(--space-4); font-size: var(--text-body); border-radius: var(--radius-lg); }
+
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 8px 12px;
 }
 
 .search-input-wrapper {
@@ -1145,6 +1285,13 @@
   background-color: var(--bg-surface);
   border: 1px dashed var(--border-subtle);
   border-radius: var(--radius-lg);
+}
+
+.card .empty-state,
+.card > .empty-state {
+  border: none;
+  background-color: transparent;
+  padding: var(--space-8) var(--space-6);
 }
 
 .empty-state-icon {

@@ -195,7 +195,7 @@ export default function DemoPage() {
     STAGES.find((s) => s.step === demoStatus.current_stage) || STAGES[0];
 
   return (
-    <div style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+    <div className="page-container">
       {/* Page Header */}
       <PageHeader
         title="Autonomous Self-Healing Demonstration"

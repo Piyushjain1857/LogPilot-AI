@@ -184,7 +184,7 @@ export default function OverviewPage() {
   };
 
   return (
-    <div>
+    <div className="page-container">
       <PageHeader
         title="System Overview"
         description="Enterprise AIOps Observability — Live database metrics and telemetry streams."

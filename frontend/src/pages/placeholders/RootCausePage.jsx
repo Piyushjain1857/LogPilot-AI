@@ -139,16 +139,8 @@ export default function RootCausePage() {
 
       {/* Control bar: Incident selector & Graph View toggle */}
       <div
-        className="card"
-        style={{
-          padding: "14px 16px",
-          marginBottom: "16px",
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "12px",
-        }}
+        className="filter-toolbar"
+        style={{ marginBottom: "16px" }}
       >
         {/* Left: Incident selector */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>

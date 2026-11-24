@@ -50,7 +50,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div>
+    <div className="page-container">
       <PageHeader
         title="Platform Settings"
         description="Configure theme, sidebar state, display density, and auto-refresh intervals."

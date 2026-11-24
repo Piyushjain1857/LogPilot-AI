@@ -76,14 +76,7 @@ export default function LiveLogsPage() {
   };
 
   return (
-    <div
-      style={{
-        padding: "var(--space-6)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-5)",
-      }}
-    >
+    <div className="page-container">
       {/* Page Header */}
       <PageHeader
         title="Live Logs Stream"

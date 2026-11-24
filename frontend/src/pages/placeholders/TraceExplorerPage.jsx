@@ -116,15 +116,7 @@ export default function TraceExplorerPage() {
   // --- DETAIL VIEW ---
   if (selectedTraceId) {
     return (
-      <div
-        className="page-container"
-        style={{
-          padding: "var(--space-6)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-6)",
-        }}
-      >
+      <div className="page-container">
         <PageHeader
           title="Trace Investigation Waterfall"
           description={`Distributed transaction timeline for trace ${selectedTraceId}`}
@@ -225,15 +217,7 @@ export default function TraceExplorerPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div
-      className="page-container"
-      style={{
-        padding: "var(--space-6)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-6)",
-      }}
-    >
+    <div className="page-container">
       <PageHeader
         title="Trace Explorer"
         description="Investigate correlated distributed transactions across microservices, observe latencies, and pinpoint error cascades."

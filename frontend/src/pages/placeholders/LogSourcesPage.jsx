@@ -113,7 +113,7 @@ export default function LogSourcesPage() {
   ];
 
   return (
-    <div className="page-container" style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+    <div className="page-container">
       {/* Page Header */}
       <PageHeader
         title="Log Sources & Telemetry Ingestion"

@@ -138,15 +138,7 @@ export default function ClusterExplorerPage() {
   };
 
   return (
-    <div
-      className="page-container"
-      style={{
-        padding: "var(--space-6)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-6)",
-      }}
-    >
+    <div className="page-container">
       <PageHeader
         title="Log Clusters & Pattern Mining"
         description="Drain3 template mining, TF-IDF semantic clustering, variable token extraction, and frequency tracking."

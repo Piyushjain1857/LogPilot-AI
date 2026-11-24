@@ -204,15 +204,7 @@ export default function LogExplorerPage() {
   );
 
   return (
-    <div
-      className="page-container"
-      style={{
-        padding: "var(--space-6)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-6)",
-      }}
-    >
+    <div className="page-container">
       <PageHeader
         title="Logs Explorer"
         description="FTS5 Full-Text Search, safe query language filters, distributed trace grouping, and exports."

@@ -94,7 +94,7 @@ export default function RemediationPage() {
   };
 
   return (
-    <div style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+    <div className="page-container">
       {/* Page Header */}
       <PageHeader
         title="Remediation Playbook Studio"

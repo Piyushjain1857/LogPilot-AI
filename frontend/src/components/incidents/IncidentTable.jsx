@@ -21,7 +21,7 @@ export default function IncidentTable({
 
   if (!incidents || incidents.length === 0) {
     return (
-      <div className="card" style={{ padding: "0" }}>
+      <div className="card" style={{ padding: "32px 16px" }}>
         <EmptyState
           icon={AlertOctagon}
           title="No Operational Incidents Found"

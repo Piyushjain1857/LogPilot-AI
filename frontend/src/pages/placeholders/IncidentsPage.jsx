@@ -224,22 +224,10 @@ export default function IncidentsPage() {
       )}
 
       {/* Filter and Control Bar */}
-      <div
-        className="card"
-        style={{
-          marginTop: "16px",
-          marginBottom: "16px",
-          padding: "14px 16px",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "12px",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+      <div className="filter-toolbar">
         {/* Left: Search input */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 260px" }}>
-          <div style={{ position: "relative", width: "100%", maxWidth: "340px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 280px", maxWidth: "380px" }}>
+          <div style={{ position: "relative", width: "100%" }}>
             <Search
               size={14}
               style={{
@@ -259,7 +247,7 @@ export default function IncidentsPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              style={{ paddingLeft: "32px", fontSize: "12px" }}
+              style={{ paddingLeft: "32px", fontSize: "12px", height: "36px" }}
             />
           </div>
         </div>
@@ -274,7 +262,7 @@ export default function IncidentsPage() {
               setSelectedService(e.target.value);
               setPage(1);
             }}
-            style={{ fontSize: "12px", width: "auto" }}
+            style={{ fontSize: "12px", width: "auto", minWidth: "140px", height: "36px" }}
           >
             <option value="">All Services</option>
             {availableServices.map((svc) => (
@@ -292,7 +280,7 @@ export default function IncidentsPage() {
               setSelectedSeverity(e.target.value);
               setPage(1);
             }}
-            style={{ fontSize: "12px", width: "auto" }}
+            style={{ fontSize: "12px", width: "auto", minWidth: "130px", height: "36px" }}
           >
             <option value="ALL">All Severities</option>
             <option value="CRITICAL">CRITICAL</option>
@@ -309,7 +297,7 @@ export default function IncidentsPage() {
               setSelectedStatus(e.target.value);
               setPage(1);
             }}
-            style={{ fontSize: "12px", width: "auto" }}
+            style={{ fontSize: "12px", width: "auto", minWidth: "130px", height: "36px" }}
           >
             <option value="ALL">All Statuses</option>
             <option value="active">Active</option>
