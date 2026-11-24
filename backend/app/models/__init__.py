@@ -11,6 +11,7 @@ from app.models.playbook import RemediationPlaybook
 from app.models.event import SystemEvent
 from app.models.preference import WorkspacePreference
 from app.models.saved_search import SavedSearch, SearchHistory
+from app.models.anomaly import Anomaly, AnomalyDetectionRun, ServiceBaseline, DetectionConfig
 
 __all__ = [
     "LogSource",
@@ -28,4 +29,8 @@ __all__ = [
     "WorkspacePreference",
     "SavedSearch",
     "SearchHistory",
+    "Anomaly",
+    "AnomalyDetectionRun",
+    "ServiceBaseline",
+    "DetectionConfig",
 ]

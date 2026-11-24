@@ -1,180 +1,398 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
 import PageHeader from "../../components/common/PageHeader";
+import AnomalyMetricCards from "../../components/anomalies/AnomalyMetricCards";
+import AnomalyChart from "../../components/anomalies/AnomalyChart";
+import AnomalyTable from "../../components/anomalies/AnomalyTable";
+import AnomalyDetailDrawer from "../../components/anomalies/AnomalyDetailDrawer";
+import DetectionRunModal from "../../components/anomalies/DetectionRunModal";
+import { anomalyService } from "../../services/anomalyService";
+import { logSourceService } from "../../services/logSourceService";
 import {
-  Activity,
-  Zap,
-  TrendingUp,
-  ExternalLink,
-  Bot,
+  RefreshCw,
+  Play,
+  RotateCcw,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function AnomaliesPage() {
-  const navigate = useNavigate();
+  // Query & Filter states
+  const [selectedService, setSelectedService] = useState("");
+  const [selectedSeverity, setSelectedSeverity] = useState("ALL");
+  const [selectedStatus, setSelectedStatus] = useState("ACTIVE");
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
-  const anomalies = [
-    {
-      id: "ANOM-401",
-      service: "order-service",
-      detectedAt: "2026-11-24 10:00:11 UTC",
-      zscore: 4.82,
-      baselineRate: "1.2 errors/min",
-      observedRate: "88 errors/min",
-      type: "Frequency Burst Anomaly",
-      pattern: "DatabaseConnectionError: connection pool exhausted (max=100)",
-      trace_id: "b223-1109-ee74",
-      confidence: 98,
-    },
-    {
-      id: "ANOM-402",
-      service: "checkout-service",
-      detectedAt: "2026-11-24 09:46:12 UTC",
-      zscore: 3.91,
-      baselineRate: "0.4 errors/min",
-      observedRate: "42 errors/min",
-      type: "Unhandled Exception Spike",
-      pattern: "KeyError: 'tax_rate_id' at CheckoutCalculator.py:142",
-      trace_id: "d991-8812-cc55",
-      confidence: 94,
-    },
-    {
-      id: "ANOM-403",
-      service: "payment-service",
-      detectedAt: "2026-11-24 10:15:00 UTC",
-      zscore: 3.15,
-      baselineRate: "180ms p95 latency",
-      observedRate: "15,400ms p95 latency",
-      type: "Latency Outlier Anomaly",
-      pattern: "HTTP 504 Gateway Timeout upstream provider=StripeConnect",
-      trace_id: "a118-7744-bb99",
-      confidence: 89,
-    },
-  ];
+  // Data states
+  const [anomalies, setAnomalies] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState(null);
+  const [services, setServices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [notification, setNotification] = useState(null);
+
+  // Modals & Drawers
+  const [selectedAnomalyDetail, setSelectedAnomalyDetail] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isRunModalOpen, setIsRunModalOpen] = useState(false);
+  const [isRebuilding, setIsRebuilding] = useState(false);
+
+  // Load available services for filter dropdown
+  useEffect(() => {
+    logSourceService
+      .listSources()
+      .then((sources) => {
+        const unique = Array.from(new Set((sources || []).map((s) => s.service_name).filter(Boolean)));
+        setServices(unique);
+      })
+      .catch((_) => {});
+  }, []);
+
+  // Fetch Stats
+  const fetchStats = useCallback(async () => {
+    try {
+      const data = await anomalyService.getStatistics();
+      setStats(data);
+    } catch (_) {
+      /* ignore */
+    }
+  }, []);
+
+  // Fetch Anomalies
+  const fetchAnomalies = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = {
+        page,
+        page_size: pageSize,
+      };
+      if (selectedService) params.service = selectedService;
+      if (selectedSeverity !== "ALL") params.severity = selectedSeverity;
+      if (selectedStatus !== "ALL") params.status = selectedStatus;
+      if (selectedAlgorithm !== "ALL") params.algorithm = selectedAlgorithm;
+
+      const data = await anomalyService.listAnomalies(params);
+      setAnomalies(data.items || []);
+      setTotal(data.total || 0);
+      setTotalPages(data.total_pages || 1);
+    } catch (err) {
+      setError(err.response?.data?.detail || err.message || "Failed to load anomalies.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, selectedService, selectedSeverity, selectedStatus, selectedAlgorithm]);
+
+  useEffect(() => {
+    fetchStats();
+    fetchAnomalies();
+  }, [fetchStats, fetchAnomalies]);
+
+  // Open detail drawer
+  const handleSelectAnomaly = async (id) => {
+    try {
+      const detail = await anomalyService.getAnomalyDetail(id);
+      setSelectedAnomalyDetail(detail);
+      setIsDetailOpen(true);
+    } catch (err) {
+      setError("Failed to fetch anomaly diagnostic details.");
+    }
+  };
+
+  // Status update
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      await anomalyService.updateAnomalyStatus(id, status);
+      setNotification(`Anomaly status updated to ${status}.`);
+      fetchAnomalies();
+      fetchStats();
+      if (selectedAnomalyDetail && selectedAnomalyDetail.id === id) {
+        const updated = await anomalyService.getAnomalyDetail(id);
+        setSelectedAnomalyDetail(updated);
+      }
+      setTimeout(() => setNotification(null), 4000);
+    } catch (err) {
+      setError("Failed to update anomaly status.");
+    }
+  };
+
+  // Rebuild baselines
+  const handleRebuildBaselines = async () => {
+    setIsRebuilding(true);
+    try {
+      await anomalyService.rebuildBaselines("5m", 7);
+      setNotification("Service statistical baselines successfully rebuilt across 7-day log history.");
+      setTimeout(() => setNotification(null), 5000);
+    } catch (err) {
+      setError("Failed to rebuild service baselines.");
+    } finally {
+      setIsRebuilding(false);
+    }
+  };
 
   return (
-    <div style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-      {/* Page Header */}
+    <div
+      className="page-container"
+      style={{
+        padding: "var(--space-6)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-6)",
+      }}
+    >
       <PageHeader
         title="Anomaly Detection Engine"
-        subtitle="Rolling z-score statistical burst analysis and unsupervised frequency anomaly detection across telemetry streams."
-        badge={
+        description="Multi-method statistical and machine learning anomaly detection (Z-Score, MAD, EWMA, Isolation Forest)."
+        actions={
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <span className="badge badge-error">3 Anomalies Active</span>
-            <span className="badge badge-success">z &gt; 3.0 Threshold</span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleRebuildBaselines}
+              disabled={isRebuilding}
+              style={{ gap: "6px" }}
+            >
+              <RotateCcw size={14} className={isRebuilding ? "spinning" : ""} />
+              {isRebuilding ? "Rebuilding..." : "Rebuild Baselines"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setIsRunModalOpen(true)}
+              style={{ gap: "6px" }}
+            >
+              <Play size={14} /> Run Detection
+            </button>
           </div>
         }
       />
 
+      {notification && (
+        <div
+          style={{
+            padding: "var(--space-3) var(--space-4)",
+            borderRadius: "var(--radius-md)",
+            backgroundColor: "rgba(16, 185, 129, 0.15)",
+            border: "1px solid var(--status-success)",
+            color: "var(--status-success)",
+            fontSize: "13px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <CheckCircle2 size={16} />
+          <span>{notification}</span>
+        </div>
+      )}
+
+      {error && (
+        <div
+          style={{
+            padding: "var(--space-3) var(--space-4)",
+            borderRadius: "var(--radius-md)",
+            backgroundColor: "rgba(239, 68, 68, 0.15)",
+            border: "1px solid var(--severity-error)",
+            color: "var(--severity-error)",
+            fontSize: "13px",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       {/* KPI Metric Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "var(--space-4)" }}>
-        <div className="card" style={{ padding: "var(--space-4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>
-              Peak z-Score
-            </span>
-            <TrendingUp size={16} color="var(--status-error)" />
-          </div>
-          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--status-error)" }}>
-            4.82 σ
-          </div>
-          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
-            Extreme deviation in order-service
-          </div>
-        </div>
+      <AnomalyMetricCards stats={stats} loading={isLoading} />
 
-        <div className="card" style={{ padding: "var(--space-4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>
-              Detection Window
-            </span>
-            <Zap size={16} color="var(--accent-primary)" />
-          </div>
-          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--text-primary)" }}>
-            60s Rolling
-          </div>
-          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
-            Continuous sliding window
-          </div>
-        </div>
+      {/* 24-Hour Trend Chart */}
+      <AnomalyChart trendData={stats?.recent_trend || []} loading={isLoading} />
 
-        <div className="card" style={{ padding: "var(--space-4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>
-              Impacted Microservices
-            </span>
-            <Activity size={16} color="var(--status-warning)" />
+      {/* Structured Filter Row */}
+      <div
+        className="card"
+        style={{
+          padding: "var(--space-3) var(--space-4)",
+          backgroundColor: "var(--bg-card)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "var(--space-3)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-muted)" }}>
+            <Filter size={14} />
+            <span style={{ fontSize: "12px", fontWeight: 600 }}>Filters:</span>
           </div>
-          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--text-primary)" }}>
-            3
-          </div>
-          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
-            order, checkout, payment
-          </div>
-        </div>
-      </div>
 
-      {/* Anomalies Feed */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-        {anomalies.map((anom) => (
-          <div
-            key={anom.id}
-            className="card"
+          {/* Service Selector */}
+          <select
+            value={selectedService}
+            onChange={(e) => {
+              setSelectedService(e.target.value);
+              setPage(1);
+            }}
             style={{
-              padding: "var(--space-5)",
-              borderLeft: "4px solid var(--status-error)",
+              padding: "4px 8px",
+              fontSize: "12px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-subtle)",
+              backgroundColor: "var(--bg-elevated)",
+              color: "var(--text-primary)",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "4px" }}>
-                  <span className="code-font" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
-                    {anom.id}
-                  </span>
-                  <span className="badge badge-error">z = {anom.zscore}σ</span>
-                  <span className="format-pill" style={{ color: "var(--accent-primary)" }}>{anom.service}</span>
-                  <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{anom.detectedAt}</span>
-                </div>
-                <h3 style={{ fontSize: "var(--text-card-title)", fontWeight: 700, color: "var(--text-primary)" }}>
-                  {anom.type} on {anom.service}
-                </h3>
-              </div>
+            <option value="">All Services</option>
+            {services.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
 
+          {/* Status Filter */}
+          <div style={{ display: "inline-flex", gap: "4px" }}>
+            {["ACTIVE", "ACKNOWLEDGED", "RESOLVED", "ALL"].map((st) => (
               <button
+                key={st}
                 type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => navigate("/app/troubleshooter")}
+                className={`btn ${selectedStatus === st ? "btn-primary" : "btn-secondary"} btn-xs`}
+                style={{ fontSize: "11px", padding: "2px 8px" }}
+                onClick={() => {
+                  setSelectedStatus(st);
+                  setPage(1);
+                }}
               >
-                <Bot size={14} /> Diagnose Anomaly
+                {st}
               </button>
-            </div>
-
-            <div style={{ backgroundColor: "var(--bg-input)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)", fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--status-error)", wordBreak: "break-all", marginBottom: "var(--space-3)" }}>
-              {anom.pattern}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--space-3)", fontSize: "var(--text-caption)", borderTop: "1px solid var(--border-subtle)", paddingTop: "var(--space-3)" }}>
-              <div>
-                <span style={{ color: "var(--text-muted)" }}>Baseline Frequency: </span>
-                <span className="tabular-nums" style={{ color: "var(--text-secondary)" }}>{anom.baselineRate}</span>
-              </div>
-              <div>
-                <span style={{ color: "var(--text-muted)" }}>Observed Rate: </span>
-                <span className="tabular-nums" style={{ fontWeight: 700, color: "var(--status-error)" }}>{anom.observedRate}</span>
-              </div>
-              <div>
-                <span style={{ color: "var(--text-muted)" }}>Trace: </span>
-                <span
-                  className="code-font"
-                  style={{ color: "var(--accent-secondary)", cursor: "pointer" }}
-                  onClick={() => navigate(`/app/log-explorer?search=${encodeURIComponent(anom.trace_id)}`)}
-                >
-                  {anom.trace_id} <ExternalLink size={11} style={{ display: "inline" }} />
-                </span>
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
+
+          {/* Severity Filter */}
+          <div style={{ display: "inline-flex", gap: "4px" }}>
+            {["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map((sev) => (
+              <button
+                key={sev}
+                type="button"
+                className={`btn ${selectedSeverity === sev ? "btn-primary" : "btn-secondary"} btn-xs`}
+                style={{ fontSize: "11px", padding: "2px 8px" }}
+                onClick={() => {
+                  setSelectedSeverity(sev);
+                  setPage(1);
+                }}
+              >
+                {sev}
+              </button>
+            ))}
+          </div>
+
+          {/* Algorithm Filter */}
+          <select
+            value={selectedAlgorithm}
+            onChange={(e) => {
+              setSelectedAlgorithm(e.target.value);
+              setPage(1);
+            }}
+            style={{
+              padding: "4px 8px",
+              fontSize: "12px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-subtle)",
+              backgroundColor: "var(--bg-elevated)",
+              color: "var(--text-primary)",
+            }}
+          >
+            <option value="ALL">All Algorithms</option>
+            <option value="Z_SCORE">Z-Score</option>
+            <option value="MAD">MAD</option>
+            <option value="EWMA">EWMA</option>
+            <option value="ISOLATION_FOREST">Isolation Forest</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary btn-xs"
+          onClick={() => {
+            fetchAnomalies();
+            fetchStats();
+          }}
+          title="Refresh"
+        >
+          <RefreshCw size={12} className={isLoading ? "spinning" : ""} /> Refresh
+        </button>
       </div>
+
+      {/* Anomalies Table */}
+      <AnomalyTable
+        anomalies={anomalies}
+        loading={isLoading}
+        onSelectAnomaly={handleSelectAnomaly}
+        onUpdateStatus={handleUpdateStatus}
+      />
+
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "var(--space-3) 0",
+          }}
+        >
+          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+            Showing page {page} of {totalPages} ({total} total anomalies)
+          </span>
+
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              style={{ gap: "4px" }}
+            >
+              <ChevronLeft size={14} /> Previous
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              style={{ gap: "4px" }}
+            >
+              Next <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Diagnostic Detail Drawer */}
+      <AnomalyDetailDrawer
+        anomalyDetail={selectedAnomalyDetail}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onUpdateStatus={handleUpdateStatus}
+      />
+
+      {/* Run Detection Modal */}
+      <DetectionRunModal
+        isOpen={isRunModalOpen}
+        onClose={() => setIsRunModalOpen(false)}
+        services={services}
+        onRunDetection={async (payload) => {
+          const res = await anomalyService.triggerDetection(payload);
+          fetchAnomalies();
+          fetchStats();
+          return res;
+        }}
+      />
     </div>
   );
 }
