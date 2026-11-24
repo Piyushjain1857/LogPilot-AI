@@ -1,3 +1,4 @@
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -8,3 +9,55 @@ class OverviewSummaryResponse(BaseModel):
     critical_logs: int
     active_incidents: int
     configured_sources: int
+
+
+class LogActivityPoint(BaseModel):
+    timestamp: str
+    count: int
+    error_count: int
+    warning_count: int
+
+
+class LogActivityResponse(BaseModel):
+    range: str
+    bucket_minutes: int
+    points: List[LogActivityPoint]
+
+
+class SeverityDistributionItem(BaseModel):
+    severity: str
+    count: int
+    percentage: float
+
+
+class SeverityDistributionResponse(BaseModel):
+    total: int
+    distribution: List[SeverityDistributionItem]
+
+
+class RecentIncidentItem(BaseModel):
+    id: str
+    title: str
+    severity: str
+    status: str
+    affected_services: List[str]
+    first_detected_at: str
+    last_detected_at: str
+
+
+class RecentIncidentsResponse(BaseModel):
+    incidents: List[RecentIncidentItem]
+
+
+class SourceHealthItem(BaseModel):
+    id: str
+    name: str
+    source_type: str
+    service_name: str
+    status: str
+    health: str  # healthy, degraded, unhealthy, unknown
+    last_seen_at: Optional[str] = None
+
+
+class SourceHealthResponse(BaseModel):
+    sources: List[SourceHealthItem]

@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LogPilot AI — Detect. Diagnose. Resolve.</title>
+    <!-- Prevent Theme Flashing on Initial Load -->
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem("logpilot_theme") || "dark";
+          var resolvedTheme = savedTheme;
+          if (savedTheme === "system") {
+            resolvedTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.setAttribute("data-theme", resolvedTheme);
+        } catch (e) {}
+      })();
+    </script>
     <!-- Google Fonts for Inter & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

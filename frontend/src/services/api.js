@@ -36,7 +36,6 @@ apiClient.interceptors.response.use(
  * Fetch root application metadata (GET /)
  */
 export const getRootMetadata = async (signal) => {
-  // Root metadata is served at / rather than /api/v1
   const rootBase = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
   const response = await axios.get(`${rootBase}/`, { signal, timeout: 5000 });
   return response.data;
@@ -71,6 +70,54 @@ export const getSystemCapabilities = async (signal) => {
  */
 export const getOverviewSummary = async (signal) => {
   const response = await apiClient.get("/overview/summary", { signal });
+  return response.data;
+};
+
+/**
+ * Fetch log activity time series (GET /api/v1/overview/activity?range=...)
+ */
+export const getLogActivity = async (range = "24h", signal) => {
+  const response = await apiClient.get(`/overview/activity?range=${range}`, { signal });
+  return response.data;
+};
+
+/**
+ * Fetch log severity breakdown (GET /api/v1/overview/severity-distribution)
+ */
+export const getSeverityDistribution = async (signal) => {
+  const response = await apiClient.get("/overview/severity-distribution", { signal });
+  return response.data;
+};
+
+/**
+ * Fetch recent incidents list (GET /api/v1/overview/recent-incidents?limit=...)
+ */
+export const getRecentIncidents = async (limit = 5, signal) => {
+  const response = await apiClient.get(`/overview/recent-incidents?limit=${limit}`, { signal });
+  return response.data;
+};
+
+/**
+ * Fetch source health statuses (GET /api/v1/overview/source-health)
+ */
+export const getSourceHealth = async (signal) => {
+  const response = await apiClient.get("/overview/source-health", { signal });
+  return response.data;
+};
+
+/**
+ * Fetch workspace preferences (GET /api/v1/settings/preferences)
+ */
+export const getPreferences = async (signal) => {
+  const response = await apiClient.get("/settings/preferences", { signal });
+  return response.data;
+};
+
+/**
+ * Update workspace preferences (PATCH /api/v1/settings/preferences)
+ */
+export const updatePreferences = async (data, signal) => {
+  const response = await apiClient.patch("/settings/preferences", data, { signal });
   return response.data;
 };
 

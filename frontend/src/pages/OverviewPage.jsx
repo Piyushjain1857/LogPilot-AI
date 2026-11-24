@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   RefreshCw,
   Server,
@@ -6,29 +7,61 @@ import {
   AlertTriangle,
   FileText,
   ShieldAlert,
-  Database,
   Cpu,
-  CheckCircle2,
+  Plus,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  CartesianGrid,
+  BarChart,
+  Bar,
+  Cell,
+} from "recharts";
+
 import PageHeader from "../components/common/PageHeader";
 import MetricCard from "../components/dashboard/MetricCard";
 import CapabilitiesGrid from "../components/dashboard/CapabilitiesGrid";
+import ChartCard from "../components/common/ChartCard";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Badge from "../components/common/Badge";
+import StatusBadge from "../components/common/StatusBadge";
 import EmptyState from "../components/common/EmptyState";
 import ErrorMessage from "../components/common/ErrorMessage";
+import DateRangeSelector from "../components/common/DateRangeSelector";
+import { useWorkspace } from "../context/WorkspaceContext";
 import {
   getSystemStatus,
   getSystemCapabilities,
   getOverviewSummary,
+  getLogActivity,
+  getSeverityDistribution,
+  getRecentIncidents,
+  getSourceHealth,
 } from "../services/api";
 
+const SEVERITY_BAR_COLORS = {
+  CRITICAL: "#A855F7",
+  ERROR: "#EF4444",
+  WARNING: "#F59E0B",
+  INFO: "#3B82F6",
+  DEBUG: "#8492A6",
+};
+
 export default function OverviewPage() {
+  const { autoRefreshEnabled, autoRefreshInterval } = useWorkspace();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [lastRefreshed, setLastRefreshed] = useState(null);
 
+  const [timeRange, setTimeRange] = useState("24h");
   const [systemStatus, setSystemStatus] = useState(null);
   const [capabilities, setCapabilities] = useState({});
   const [summary, setSummary] = useState({
@@ -39,42 +72,79 @@ export default function OverviewPage() {
     active_incidents: 0,
     configured_sources: 0,
   });
+  const [activity, setActivity] = useState({ points: [] });
+  const [severityDist, setSeverityDist] = useState({ total: 0, distribution: [] });
+  const [recentIncidents, setRecentIncidents] = useState({ incidents: [] });
+  const [sourceHealth, setSourceHealth] = useState({ sources: [] });
 
-  const fetchData = useCallback(async (isManualRefresh = false) => {
-    if (isManualRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
+  const abortRef = useRef(null);
 
-    const controller = new AbortController();
+  const fetchData = useCallback(
+    async (isManual = false) => {
+      if (isManual) setRefreshing(true);
+      setError(null);
 
-    try {
-      const [statusRes, capRes, summaryRes] = await Promise.all([
-        getSystemStatus(controller.signal),
-        getSystemCapabilities(controller.signal),
-        getOverviewSummary(controller.signal),
-      ]);
+      if (abortRef.current) abortRef.current.abort();
+      abortRef.current = new AbortController();
+      const signal = abortRef.current.signal;
 
-      setSystemStatus(statusRes);
-      setCapabilities(capRes);
-      setSummary(summaryRes);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+      try {
+        const [
+          statusRes,
+          capRes,
+          summaryRes,
+          activityRes,
+          distRes,
+          incidentsRes,
+          sourcesRes,
+        ] = await Promise.all([
+          getSystemStatus(signal),
+          getSystemCapabilities(signal),
+          getOverviewSummary(signal),
+          getLogActivity(timeRange, signal),
+          getSeverityDistribution(signal),
+          getRecentIncidents(5, signal),
+          getSourceHealth(signal),
+        ]);
 
-    return () => controller.abort();
-  }, []);
+        setSystemStatus(statusRes);
+        setCapabilities(capRes || {});
+        setSummary(summaryRes || { total_logs: 0, error_logs: 0, warning_logs: 0, critical_logs: 0, active_incidents: 0, configured_sources: 0 });
+        setActivity(activityRes || { points: [] });
+        setSeverityDist(distRes || { total: 0, distribution: [] });
+        setRecentIncidents(incidentsRes || { incidents: [] });
+        setSourceHealth(sourcesRes || { sources: [] });
+        setLastRefreshed(new Date().toLocaleTimeString());
+      } catch (err) {
+        if (err.name !== "CanceledError" && err.name !== "AbortError") {
+          setError(err);
+        }
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [timeRange]
+  );
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+
+    if (!autoRefreshEnabled) return;
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, autoRefreshInterval * 1000);
+
+    return () => {
+      clearInterval(interval);
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, [fetchData, autoRefreshEnabled, autoRefreshInterval]);
 
   const getGeminiBadge = (status) => {
     switch (status) {
       case "verified":
-        return <Badge variant="success">Gemini Verified</Badge>;
+        return <Badge variant="success">Verified & Active</Badge>;
       case "configured_unverified":
         return <Badge variant="warning">Configured (Unverified)</Badge>;
       case "not_configured":
@@ -87,40 +157,50 @@ export default function OverviewPage() {
     <div>
       <PageHeader
         title="System Overview"
-        description="Live operational telemetry, subsystem capability matrix, and database metrics."
+        description="Enterprise AIOps Observability — Live database metrics and telemetry streams."
         badge={
           systemStatus ? (
-            <Badge
-              variant={systemStatus.backend_status === "online" ? "success" : "error"}
-              icon={systemStatus.backend_status === "online" ? CheckCircle2 : AlertCircle}
-            >
-              {systemStatus.backend_status.toUpperCase()}
-            </Badge>
+            <StatusBadge
+              status={systemStatus.backend_status === "online" ? "healthy" : "unhealthy"}
+              label={systemStatus.backend_status.toUpperCase()}
+            />
           ) : null
         }
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchData(true)}
-            loading={refreshing}
-            icon={RefreshCw}
-          >
-            Refresh Data
-          </Button>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+            {lastRefreshed && (
+              <span className="tabular-nums" style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)" }}>
+                Updated {lastRefreshed}
+              </span>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => fetchData(true)}
+              loading={refreshing}
+              icon={RefreshCw}
+            >
+              Refresh
+            </Button>
+            <Link to="/app/log-sources">
+              <Button variant="primary" size="sm" icon={Plus}>
+                Add Log Source
+              </Button>
+            </Link>
+          </div>
         }
       />
 
       {error && (
         <ErrorMessage
-          title="Backend Connection Notice"
+          title="Backend Disconnection Notice"
           message={error.message || "Failed to communicate with the FastAPI backend service."}
           onRetry={() => fetchData(true)}
           requestId={error.requestId}
         />
       )}
 
-      {/* Metrics Row */}
+      {/* Primary KPI Metrics Grid */}
       <div className="metrics-grid">
         <MetricCard
           title="Total Ingested Logs"
@@ -163,7 +243,7 @@ export default function OverviewPage() {
           loading={loading}
         />
         <MetricCard
-          title="Log Sources"
+          title="Configured Sources"
           value={summary.configured_sources.toLocaleString()}
           icon={Server}
           footerText="Active telemetry sources"
@@ -172,65 +252,316 @@ export default function OverviewPage() {
         />
       </div>
 
-      {/* Middle Row: System Status & Diagnostic Telemetry */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "var(--space-6)", marginBottom: "var(--space-6)" }}>
-        <Card title="System Telemetry & Health">
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>Backend Availability</span>
-              <span style={{ fontWeight: 600 }}>
-                {systemStatus ? systemStatus.backend_status.toUpperCase() : "Connecting..."}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>Database Connectivity</span>
-              <Badge variant={systemStatus?.database_connected ? "success" : "error"}>
-                {systemStatus?.database_connected ? "SQLite Connected" : "Disconnected"}
-              </Badge>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>AI Engine (Gemini)</span>
-              {getGeminiBadge(systemStatus?.gemini_status)}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>Server Uptime</span>
-              <span className="code-font" style={{ fontSize: 13 }}>
-                {systemStatus ? `${systemStatus.uptime_seconds}s` : "..."}
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>Environment</span>
-              <span className="code-font" style={{ fontSize: 13 }}>
-                {systemStatus?.environment || "development"}
-              </span>
-            </div>
-          </div>
-        </Card>
+      {/* Zero State Guidance if No Logs Ingested */}
+      {summary.total_logs === 0 && !loading && !error && (
+        <div style={{ marginBottom: "var(--space-6)" }}>
+          <EmptyState
+            title="No Ingested Logs"
+            description="Your observability database contains 0 log events. Connect a log source or upload log files to begin telemetry analysis."
+            icon={FileText}
+            action={
+              <Link to="/app/log-sources">
+                <Button variant="primary" size="sm" icon={Plus}>
+                  Configure First Log Source
+                </Button>
+              </Link>
+            }
+          />
+        </div>
+      )}
 
-        <Card title="Telemetry State">
-          {summary.total_logs === 0 ? (
+      {/* Charts Section: Activity Time Series & Severity Distribution */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
+          gap: "var(--card-gap)",
+          marginBottom: "var(--space-6)",
+        }}
+      >
+        {/* Log Activity Area Chart */}
+        <ChartCard
+          title="Log Ingestion Activity"
+          subtitle="Frequency over selected time window"
+          loading={loading}
+          empty={!activity?.points || activity.points.length === 0}
+          emptyMessage="No log activity recorded. Add a log source or ingest logs to visualize volume."
+          actions={
+            <DateRangeSelector
+              selected={timeRange}
+              onChange={(newRange) => setTimeRange(newRange)}
+            />
+          }
+        >
+          <div style={{ width: "100%", height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={activity?.points || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="logVolumeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0.0} />
+                  </linearGradient>
+                  <linearGradient id="errorGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--status-error)" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="var(--status-error)" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                <XAxis
+                  dataKey="timestamp"
+                  tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                  tickFormatter={(val) => {
+                    try {
+                      return new Date(val).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                    } catch {
+                      return val;
+                    }
+                  }}
+                  stroke="var(--border-subtle)"
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                  stroke="var(--border-subtle)"
+                  allowDecimals={false}
+                />
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: "var(--bg-surface)",
+                    borderColor: "var(--border-strong)",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: 12,
+                    color: "var(--text-primary)",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  name="Total Logs"
+                  stroke="var(--accent-primary)"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#logVolumeGrad)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="error_count"
+                  name="Errors"
+                  stroke="var(--status-error)"
+                  strokeWidth={1.5}
+                  fillOpacity={1}
+                  fill="url(#errorGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        {/* Severity Breakdown Bar Chart */}
+        <ChartCard
+          title="Severity Distribution"
+          subtitle="Volume breakdown by severity level"
+          loading={loading}
+          empty={!severityDist?.distribution || severityDist.distribution.length === 0}
+          emptyMessage="No severity metrics available. Ingest logs to calculate distribution."
+        >
+          <div style={{ width: "100%", height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={severityDist?.distribution || []}
+                layout="vertical"
+                margin={{ top: 10, right: 20, left: 20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 10, fill: "var(--text-muted)" }}
+                  stroke="var(--border-subtle)"
+                  allowDecimals={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="severity"
+                  tick={{ fontSize: 11, fill: "var(--text-secondary)" }}
+                  stroke="var(--border-subtle)"
+                  width={70}
+                />
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: "var(--bg-surface)",
+                    borderColor: "var(--border-strong)",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: 12,
+                    color: "var(--text-primary)",
+                  }}
+                  formatter={(val, _name, item) => [`${val} (${item.payload.percentage}%)`, "Count"]}
+                />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  {(severityDist?.distribution || []).map((entry) => (
+                    <Cell
+                      key={entry.severity}
+                      fill={SEVERITY_BAR_COLORS[entry.severity] || "var(--accent-primary)"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Middle Row: Recent Incidents & Configured Source Health */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+          gap: "var(--card-gap)",
+          marginBottom: "var(--space-6)",
+        }}
+      >
+        {/* Recent Incidents Card */}
+        <Card
+          title="Recent Incidents"
+          headerAction={
+            <Link to="/app/incidents" style={{ fontSize: "var(--text-caption)", fontWeight: 500 }}>
+              View All
+            </Link>
+          }
+        >
+          {!recentIncidents?.incidents || recentIncidents.incidents.length === 0 ? (
             <EmptyState
-              title="No Ingested Logs"
-              description="The SQLite database contains zero log records. Phase 2 log ingestion parsers will populate real-time telemetry here."
-              icon={Database}
+              title="No Active Incidents"
+              description="No correlated service outages or high-severity incidents recorded in the database."
+              icon={Cpu}
             />
           ) : (
-            <div>
-              <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
-                Telemetry data is active with {summary.total_logs} records stored.
-              </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              {(recentIncidents?.incidents || []).map((inc) => (
+                <div
+                  key={inc.id}
+                  style={{
+                    padding: "var(--space-3)",
+                    backgroundColor: "var(--bg-elevated)",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600, fontSize: "var(--text-body-sm)", color: "var(--text-primary)" }}>
+                      {inc.title}
+                    </span>
+                    <Badge variant={inc.severity === "CRITICAL" ? "critical" : "error"}>
+                      {inc.severity}
+                    </Badge>
+                  </div>
+                  <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", fontSize: "var(--text-micro)", color: "var(--text-muted)" }}>
+                    <StatusBadge status={inc.status} />
+                    <span>•</span>
+                    <span>{inc.affected_services.join(", ") || "General"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Source Health Card */}
+        <Card
+          title="Telemetry Source Health"
+          headerAction={
+            <Link to="/app/log-sources" style={{ fontSize: "var(--text-caption)", fontWeight: 500 }}>
+              Configure
+            </Link>
+          }
+        >
+          {!sourceHealth?.sources || sourceHealth.sources.length === 0 ? (
+            <EmptyState
+              title="No Log Sources Configured"
+              description="Connect an application, server, or file source to start gathering telemetry."
+              icon={Server}
+              action={
+                <Link to="/app/log-sources">
+                  <Button variant="primary" size="sm" icon={Plus}>
+                    Add Source
+                  </Button>
+                </Link>
+              }
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+              {(sourceHealth?.sources || []).map((src) => (
+                <div
+                  key={src.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "var(--space-3)",
+                    backgroundColor: "var(--bg-elevated)",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: "var(--text-body-sm)" }}>{src.name}</div>
+                    <div className="code-font" style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                      {src.service_name} • {src.source_type}
+                    </div>
+                  </div>
+                  <StatusBadge status={src.health} />
+                </div>
+              ))}
             </div>
           )}
         </Card>
       </div>
 
-      {/* Subsystem Capabilities Matrix */}
-      <Card title="Subsystem Implementation Capabilities">
-        <p style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: "var(--space-4)" }}>
-          Truthful readiness flags as defined by the Phase 1 backend architecture contract.
-        </p>
-        <CapabilitiesGrid capabilities={capabilities} loading={loading} />
-      </Card>
+      {/* Diagnostic & Capability Grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gap: "var(--card-gap)",
+          marginBottom: "var(--space-6)",
+        }}
+      >
+        <Card title="System Diagnostics">
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-body-sm)" }}>Backend Availability</span>
+              <StatusBadge status={systemStatus?.backend_status === "online" ? "healthy" : "unhealthy"} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-body-sm)" }}>Database Connectivity</span>
+              <Badge variant={systemStatus?.database_connected ? "success" : "error"}>
+                {systemStatus?.database_connected ? "SQLite Connected" : "Disconnected"}
+              </Badge>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-body-sm)" }}>AI Engine (Gemini)</span>
+              {getGeminiBadge(systemStatus?.gemini_status)}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-body-sm)" }}>Uptime</span>
+              <span className="code-font" style={{ fontSize: 12 }}>
+                {systemStatus ? `${systemStatus.uptime_seconds}s` : "..."}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-body-sm)" }}>Auto-Refresh</span>
+              <span className="tabular-nums" style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                {autoRefreshEnabled ? `Active (${autoRefreshInterval}s)` : "Disabled"}
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Platform Capabilities Matrix">
+          <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-caption)", marginBottom: "var(--space-3)" }}>
+            Truthful reflection of Phase 2 UI implementation vs planned future stages.
+          </p>
+          <CapabilitiesGrid capabilities={capabilities} loading={loading} />
+        </Card>
+      </div>
     </div>
   );
 }

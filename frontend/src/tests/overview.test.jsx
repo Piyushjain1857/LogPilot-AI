@@ -3,17 +3,52 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import OverviewPage from "../pages/OverviewPage";
+import { WorkspaceProvider } from "../context/WorkspaceContext";
 import * as api from "../services/api";
 
 vi.mock("../services/api");
 
+const renderOverview = () => {
+  return render(
+    <MemoryRouter>
+      <WorkspaceProvider>
+        <OverviewPage />
+      </WorkspaceProvider>
+    </MemoryRouter>
+  );
+};
+
 describe("OverviewPage Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    api.getPreferences.mockResolvedValue({
+      theme: "dark",
+      sidebar_collapsed: false,
+      display_density: "comfortable",
+      timezone: "UTC",
+      auto_refresh_enabled: false,
+      auto_refresh_interval: 30,
+    });
+    api.getLogActivity.mockResolvedValue({
+      window_hours: 24,
+      total_logs: 0,
+      points: [],
+    });
+    api.getSeverityDistribution.mockResolvedValue({
+      total: 0,
+      distribution: [],
+    });
+    api.getRecentIncidents.mockResolvedValue({
+      incidents: [],
+    });
+    api.getSourceHealth.mockResolvedValue({
+      sources: [],
+    });
   });
 
   it("renders metric cards and telemetry on successful API responses", async () => {
-    api.getSystemStatus.mockResolvedValueOnce({
+    api.getSystemStatus.mockResolvedValue({
       backend_status: "online",
       database_connected: true,
       app_version: "0.1.0",
@@ -23,13 +58,13 @@ describe("OverviewPage Component", () => {
       gemini_status: "not_configured",
     });
 
-    api.getSystemCapabilities.mockResolvedValueOnce({
+    api.getSystemCapabilities.mockResolvedValue({
       log_file_ingestion: "planned",
       incident_management: "implemented",
       ai_troubleshooting: "planned",
     });
 
-    api.getOverviewSummary.mockResolvedValueOnce({
+    api.getOverviewSummary.mockResolvedValue({
       total_logs: 120,
       error_logs: 15,
       warning_logs: 8,
@@ -38,11 +73,16 @@ describe("OverviewPage Component", () => {
       configured_sources: 3,
     });
 
-    render(
-      <MemoryRouter>
-        <OverviewPage />
-      </MemoryRouter>
-    );
+    api.getSeverityDistribution.mockResolvedValue({
+      total: 120,
+      distribution: [
+        { severity: "ERROR", count: 15, percentage: 12.5 },
+        { severity: "WARNING", count: 8, percentage: 6.7 },
+        { severity: "CRITICAL", count: 2, percentage: 1.7 },
+      ],
+    });
+
+    renderOverview();
 
     expect(await screen.findByText("120")).toBeInTheDocument();
     expect(screen.getByText("15")).toBeInTheDocument();
@@ -54,7 +94,7 @@ describe("OverviewPage Component", () => {
   });
 
   it("renders EmptyState when total_logs is 0", async () => {
-    api.getSystemStatus.mockResolvedValueOnce({
+    api.getSystemStatus.mockResolvedValue({
       backend_status: "online",
       database_connected: true,
       app_version: "0.1.0",
@@ -64,12 +104,12 @@ describe("OverviewPage Component", () => {
       gemini_status: "not_configured",
     });
 
-    api.getSystemCapabilities.mockResolvedValueOnce({
+    api.getSystemCapabilities.mockResolvedValue({
       log_file_ingestion: "planned",
       incident_management: "implemented",
     });
 
-    api.getOverviewSummary.mockResolvedValueOnce({
+    api.getOverviewSummary.mockResolvedValue({
       total_logs: 0,
       error_logs: 0,
       warning_logs: 0,
@@ -78,29 +118,25 @@ describe("OverviewPage Component", () => {
       configured_sources: 0,
     });
 
-    render(
-      <MemoryRouter>
-        <OverviewPage />
-      </MemoryRouter>
-    );
+    renderOverview();
 
     expect(await screen.findByText("No Ingested Logs")).toBeInTheDocument();
   });
 
   it("displays ErrorMessage when backend API fails", async () => {
-    api.getSystemStatus.mockRejectedValueOnce({
+    api.getSystemStatus.mockRejectedValue({
       message: "Backend is currently unreachable (Connection Refused).",
       status: 0,
       requestId: "err-1234",
     });
-    api.getSystemCapabilities.mockRejectedValueOnce(new Error("Failed"));
-    api.getOverviewSummary.mockRejectedValueOnce(new Error("Failed"));
+    api.getSystemCapabilities.mockRejectedValue(new Error("Failed"));
+    api.getOverviewSummary.mockRejectedValue(new Error("Failed"));
+    api.getLogActivity.mockRejectedValue(new Error("Failed"));
+    api.getSeverityDistribution.mockRejectedValue(new Error("Failed"));
+    api.getRecentIncidents.mockRejectedValue(new Error("Failed"));
+    api.getSourceHealth.mockRejectedValue(new Error("Failed"));
 
-    render(
-      <MemoryRouter>
-        <OverviewPage />
-      </MemoryRouter>
-    );
+    renderOverview();
 
     expect(
       await screen.findByText(/Backend is currently unreachable/i)

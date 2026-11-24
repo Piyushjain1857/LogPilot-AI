@@ -5,6 +5,7 @@ from app.models.incident import Incident, IncidentLog
 from app.models.analysis import AnalysisRun
 from app.models.playbook import RemediationPlaybook
 from app.models.event import SystemEvent
+from app.models.preference import WorkspacePreference
 
 __all__ = [
     "LogSource",
@@ -15,4 +16,5 @@ __all__ = [
     "AnalysisRun",
     "RemediationPlaybook",
     "SystemEvent",
+    "WorkspacePreference",
 ]

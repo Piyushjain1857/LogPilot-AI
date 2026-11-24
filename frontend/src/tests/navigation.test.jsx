@@ -31,6 +31,30 @@ vi.mock("../services/api", async (importOriginal) => {
       active_incidents: 0,
       configured_sources: 0,
     }),
+    getLogActivity: vi.fn().mockResolvedValue({
+      window_hours: 24,
+      total_logs: 0,
+      points: [],
+    }),
+    getSeverityDistribution: vi.fn().mockResolvedValue({
+      total: 0,
+      distribution: [],
+    }),
+    getRecentIncidents: vi.fn().mockResolvedValue({
+      incidents: [],
+    }),
+    getSourceHealth: vi.fn().mockResolvedValue({
+      sources: [],
+    }),
+    getPreferences: vi.fn().mockResolvedValue({
+      theme: "dark",
+      sidebar_collapsed: false,
+      display_density: "comfortable",
+      timezone: "UTC",
+      auto_refresh_enabled: true,
+      auto_refresh_interval: 30,
+    }),
+    updatePreferences: vi.fn().mockResolvedValue({ status: "updated" }),
   };
 });
 
@@ -48,8 +72,8 @@ describe("Application Routing and Navigation", () => {
 
     expect(screen.getAllByText("LogPilot AI")[0]).toBeInTheDocument();
     expect(screen.getByText("Detect. Diagnose. Resolve.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /get started/i })).toBeInTheDocument();
-    expect(screen.getByText(/Problem Statement: PS-01A/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /launch workspace/i })[0]).toBeInTheDocument();
+    expect(screen.getByText(/PS-01A/i)).toBeInTheDocument();
   });
 
   it("renders Console AppShell with Sidebar when navigating to /app", async () => {
@@ -60,8 +84,8 @@ describe("Application Routing and Navigation", () => {
     );
 
     expect(await screen.findByText("System Overview")).toBeInTheDocument();
-    expect(screen.getByText("OBSERVABILITY")).toBeInTheDocument();
-    expect(screen.getByText("INTELLIGENCE & AI")).toBeInTheDocument();
+    expect(screen.getByText("MONITORING")).toBeInTheDocument();
+    expect(screen.getByText("INTELLIGENCE")).toBeInTheDocument();
   });
 
   it("renders Placeholder View for future subsystem routes", async () => {
@@ -71,10 +95,9 @@ describe("Application Routing and Navigation", () => {
       </MemoryRouter>
     );
 
-    expect(
-      await screen.findByText("AI Troubleshooter Agent — Placeholder View")
-    ).toBeInTheDocument();
-    expect(screen.getAllByText(/Phase 4/)[0]).toBeInTheDocument();
+    const titles = await screen.findAllByText("AI Troubleshooter");
+    expect(titles[0]).toBeInTheDocument();
+    expect(screen.getByText(/Gemini Core \(Phase 4\)/)).toBeInTheDocument();
   });
 
   it("renders NotFoundPage for unknown routes", () => {

@@ -3,8 +3,8 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   Radio,
+  FileSearch,
   Server,
-  Search,
   Activity,
   AlertTriangle,
   GitBranch,
@@ -13,70 +13,157 @@ import {
   FileText,
   Settings,
   Terminal,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import Tooltip from "../common/Tooltip";
+import ThemeToggle from "../common/ThemeToggle";
 
-const NAV_ITEMS = [
-  { section: "OBSERVABILITY" },
-  { path: "/app", label: "Overview", icon: LayoutDashboard, end: true },
-  { path: "/app/live-logs", label: "Live Logs", icon: Radio },
-  { path: "/app/log-sources", label: "Log Sources", icon: Server },
-  { path: "/app/log-explorer", label: "Log Explorer", icon: Search },
-  { section: "INTELLIGENCE & AI" },
-  { path: "/app/anomalies", label: "Anomaly Detection", icon: Activity },
-  { path: "/app/incidents", label: "Incidents", icon: AlertTriangle },
-  { path: "/app/root-cause", label: "Root Cause Analysis", icon: GitBranch },
-  { path: "/app/troubleshooter", label: "AI Troubleshooter", icon: Bot },
-  { section: "AUTOMATION & SYSTEM" },
-  { path: "/app/remediation", label: "Remediation Playbooks", icon: ShieldCheck },
-  { path: "/app/reports", label: "Reports", icon: FileText },
-  { path: "/app/settings", label: "Settings", icon: Settings },
+const NAVIGATION_GROUPS = [
+  {
+    title: "MONITORING",
+    items: [
+      { path: "/app", label: "Overview", icon: LayoutDashboard, end: true },
+      { path: "/app/live-logs", label: "Live Logs", icon: Radio },
+      { path: "/app/log-explorer", label: "Log Explorer", icon: FileSearch },
+      { path: "/app/log-sources", label: "Log Sources", icon: Server },
+    ],
+  },
+  {
+    title: "INTELLIGENCE",
+    items: [
+      { path: "/app/anomalies", label: "Anomaly Detection", icon: Activity },
+      { path: "/app/incidents", label: "Incidents", icon: AlertTriangle },
+      { path: "/app/root-cause", label: "Root Cause Analysis", icon: GitBranch },
+      { path: "/app/troubleshooter", label: "AI Troubleshooter", icon: Bot },
+    ],
+  },
+  {
+    title: "OPERATIONS",
+    items: [
+      { path: "/app/remediation", label: "Remediation Playbooks", icon: ShieldCheck },
+      { path: "/app/reports", label: "Reports", icon: FileText },
+    ],
+  },
+  {
+    title: "WORKSPACE",
+    items: [
+      { path: "/app/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
-export default function Sidebar({ isOpen }) {
-  if (!isOpen) return null;
+export default function Sidebar({
+  collapsed = false,
+  onToggleCollapse = null,
+  onNavigate = null,
+  connectionStatus = "connected",
+}) {
+  const isMac = typeof navigator !== "undefined" && navigator.platform?.toUpperCase().indexOf("MAC") >= 0;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Main Navigation">
+      {/* Brand Header */}
       <div className="sidebar-header">
-        <NavLink to="/" className="sidebar-logo">
+        <NavLink to="/" className="sidebar-logo" onClick={onNavigate}>
           <div className="sidebar-logo-icon">
             <Terminal size={16} />
           </div>
-          <span>LogPilot AI</span>
+          {!collapsed && (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>LogPilot AI</span>
+              <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 500 }}>
+                Enterprise AIOps
+              </span>
+            </div>
+          )}
         </NavLink>
+
+        {onToggleCollapse && !collapsed && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs"
+            onClick={onToggleCollapse}
+            aria-label="Collapse sidebar"
+            style={{ color: "var(--text-muted)", padding: "0 4px" }}
+          >
+            <ChevronLeft size={16} />
+          </button>
+        )}
       </div>
 
+      {/* Navigation Groups */}
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item, index) => {
-          if (item.section) {
-            return (
-              <div key={index} className="sidebar-section-title">
-                {item.section}
-              </div>
-            );
-          }
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.end}
-              className={({ isActive }) =>
-                `sidebar-link ${isActive ? "active" : ""}`
-              }
-            >
-              <Icon size={16} />
-              <span>{item.label}</span>
-            </NavLink>
-          );
-        })}
+        {NAVIGATION_GROUPS.map((group) => (
+          <div key={group.title}>
+            {!collapsed && <div className="sidebar-section-title">{group.title}</div>}
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              const linkNode = (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.end}
+                  onClick={onNavigate}
+                  className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+                >
+                  <Icon size={16} style={{ flexShrink: 0 }} />
+                  {!collapsed && <span>{item.label}</span>}
+                </NavLink>
+              );
+
+              return collapsed ? (
+                <Tooltip key={item.path} text={item.label}>
+                  {linkNode}
+                </Tooltip>
+              ) : (
+                linkNode
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
+      {/* Footer info & quick toggles */}
       <div className="sidebar-footer">
-        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          <div>LogPilot AI v0.1.0</div>
-          <div style={{ marginTop: 2 }}>Tech Fusion 4.0 — PS-01A</div>
-        </div>
+        {collapsed ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <ThemeToggle />
+            {onToggleCollapse && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs"
+                onClick={onToggleCollapse}
+                aria-label="Expand sidebar"
+                style={{ padding: "0 4px" }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-muted)" }}>
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    backgroundColor: connectionStatus === "connected" ? "var(--status-success)" : "var(--status-error)",
+                  }}
+                />
+                <span>{connectionStatus === "connected" ? "Backend Online" : "Backend Offline"}</span>
+              </div>
+              <ThemeToggle />
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)" }}>
+              <span>LogPilot v0.1.0</span>
+              <span className="kbd-shortcut">{isMac ? "⌘K" : "Ctrl+K"}</span>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
