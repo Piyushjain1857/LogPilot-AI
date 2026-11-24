@@ -22,6 +22,11 @@ def get_roles_matrix() -> Dict[str, Any]:
                 "permissions": ["read_all", "annotate_incidents", "generate_reports", "execute_playbooks", "configure_system"],
             },
             {
+                "role": Role.NORMAL.value,
+                "description": "Standard operational user with telemetry monitoring, log queries, incident tracking, and root cause exploration.",
+                "permissions": ["read_all", "annotate_incidents"],
+            },
+            {
                 "role": Role.ANALYST.value,
                 "description": "Operational SRE analyst with diagnostic, investigation, annotation, and post-mortem synthesis capabilities.",
                 "permissions": ["read_all", "annotate_incidents", "generate_reports"],

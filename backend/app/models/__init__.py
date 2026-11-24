@@ -14,8 +14,10 @@ from app.models.event import SystemEvent
 from app.models.preference import WorkspacePreference
 from app.models.saved_search import SavedSearch, SearchHistory
 from app.models.anomaly import Anomaly, AnomalyDetectionRun, ServiceBaseline, DetectionConfig
+from app.models.user import User
 
 __all__ = [
+    "User",
     "LogSource",
     "LogEntry",
     "UploadBatch",

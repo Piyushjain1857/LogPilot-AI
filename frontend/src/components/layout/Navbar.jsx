@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Menu,
   Search,
@@ -9,11 +9,16 @@ import {
   AlertCircle,
   ChevronDown,
   Settings,
+  User,
+  LogOut,
+  RefreshCw,
+  Shield,
 } from "lucide-react";
 import Breadcrumbs from "./Breadcrumbs";
 import ConnectionIndicator from "../common/ConnectionIndicator";
 import ThemeToggle from "../common/ThemeToggle";
 import DropdownMenu from "../common/DropdownMenu";
+import { useAuth } from "../../context/AuthContext";
 import { getNotifications, clearAllNotifications } from "../../services/api";
 
 export default function Navbar({
@@ -22,6 +27,8 @@ export default function Navbar({
   connectionStatus = "connected",
   latencyMs = null,
 }) {
+  const navigate = useNavigate();
+  const { user, role, isAdmin, isNormal, logout, switchDemoRole } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [liveNotifications, setLiveNotifications] = useState([]);
   const isMac = typeof navigator !== "undefined" && navigator.platform?.toUpperCase().indexOf("MAC") >= 0;
@@ -229,6 +236,87 @@ export default function Navbar({
             <span>FastAPI Swagger Docs</span>
             <ExternalLink size={12} style={{ marginLeft: "auto", color: "var(--text-muted)" }} />
           </a>
+        </DropdownMenu>
+
+        {/* User Profile & RBAC Role Menu */}
+        <DropdownMenu
+          trigger={
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              aria-label="User profile and role menu"
+              style={{ gap: 6, fontWeight: 500 }}
+            >
+              <div
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  backgroundColor: isAdmin ? "#8b5cf6" : "#06b6d4",
+                  color: "#ffffff",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {isAdmin ? "AD" : "OP"}
+              </div>
+              <span style={{ fontSize: 12 }}>{user?.username || "user"}</span>
+              <span className={isAdmin ? "role-tag-admin" : "role-tag-normal"}>
+                {isAdmin ? "ADMIN" : "NORMAL"}
+              </span>
+              <ChevronDown size={14} style={{ color: "var(--text-muted)" }} />
+            </button>
+          }
+        >
+          <div style={{ padding: "var(--space-3) var(--space-4)", minWidth: 220 }}>
+            <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Active Identity & Role
+            </div>
+            <div style={{ fontWeight: 600, fontSize: "var(--text-body-sm)", color: "var(--text-primary)", marginTop: 2 }}>
+              {user?.full_name || (isAdmin ? "System Administrator" : "Normal User")}
+            </div>
+            <div style={{ fontSize: "var(--text-micro)", color: "var(--text-secondary)", marginTop: 1 }}>
+              {user?.email || (isAdmin ? "admin@logpilot.ai" : "operator@logpilot.ai")}
+            </div>
+            <div style={{ marginTop: 6 }}>
+              <span className={isAdmin ? "role-tag-admin" : "role-tag-normal"}>
+                Role: {isAdmin ? "ADMINISTRATOR (Full Control)" : "NORMAL (Operator / Read)"}
+              </span>
+            </div>
+          </div>
+          <div className="dropdown-divider" />
+          {/* Quick 1-click Demo Role Switcher */}
+          <button
+            type="button"
+            className="dropdown-item"
+            onClick={async () => {
+              await switchDemoRole(isAdmin ? "operator" : "admin");
+            }}
+            style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer" }}
+          >
+            <RefreshCw size={14} />
+            <span>Switch to {isAdmin ? "Normal User" : "Admin"}</span>
+          </button>
+          <Link to="/app/settings" className="dropdown-item">
+            <Settings size={14} />
+            <span>Settings & Access Matrix</span>
+          </Link>
+          <div className="dropdown-divider" />
+          <button
+            type="button"
+            className="dropdown-item"
+            onClick={async () => {
+              await logout();
+              navigate("/login");
+            }}
+            style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", color: "var(--status-critical)" }}
+          >
+            <LogOut size={14} />
+            <span>Sign Out</span>
+          </button>
         </DropdownMenu>
       </div>
     </header>

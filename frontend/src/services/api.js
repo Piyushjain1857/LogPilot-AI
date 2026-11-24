@@ -11,6 +11,22 @@ const apiClient = axios.create({
   },
 });
 
+// Request interceptor to attach JWT Authorization Bearer token from localStorage
+apiClient.interceptors.request.use(
+  (config) => {
+    try {
+      const token = localStorage.getItem("logpilot_access_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // localStorage may fail in restricted sandbox
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor for consistent error normalization
 apiClient.interceptors.response.use(
   (response) => response,
@@ -158,6 +174,29 @@ export const getPreferences = async (signal) => {
  */
 export const updatePreferences = async (data, signal) => {
   const response = await apiClient.patch("/settings/preferences", data, { signal });
+  return response.data;
+};
+
+/**
+ * User Authentication & JWT API endpoints
+ */
+export const login = async (username, password) => {
+  const response = await apiClient.post("/auth/login", { username, password });
+  return response.data;
+};
+
+export const getCurrentUserProfile = async () => {
+  const response = await apiClient.get("/auth/me");
+  return response.data;
+};
+
+export const logout = async () => {
+  const response = await apiClient.post("/auth/logout");
+  return response.data;
+};
+
+export const getDemoAccounts = async () => {
+  const response = await apiClient.get("/auth/demo-accounts");
   return response.data;
 };
 

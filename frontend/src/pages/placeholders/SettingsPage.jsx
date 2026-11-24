@@ -37,9 +37,11 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { useWorkspace } from "../../context/WorkspaceContext";
+import { useAuth } from "../../context/AuthContext";
 import { getHealthStatus } from "../../services/api";
 
 export default function SettingsPage() {
+  const { user, role, isAdmin, isNormal, switchDemoRole } = useAuth();
   const { theme, setTheme } = useTheme();
   const {
     sidebarCollapsed,
@@ -300,6 +302,42 @@ export default function SettingsPage() {
           </div>
         }
       />
+
+      {/* Role Context & Quick Switch Banner */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "var(--space-3) var(--space-4)",
+          borderRadius: "var(--radius-md)",
+          backgroundColor: isAdmin ? "rgba(139, 92, 246, 0.08)" : "rgba(6, 182, 212, 0.08)",
+          border: `1px solid ${isAdmin ? "rgba(139, 92, 246, 0.25)" : "rgba(6, 182, 212, 0.25)"}`,
+          marginBottom: "var(--space-4)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          <span className={isAdmin ? "role-tag-admin" : "role-tag-normal"}>
+            {isAdmin ? "ADMIN ROLE" : "NORMAL ROLE"}
+          </span>
+          <span style={{ fontSize: "var(--text-body-sm)", color: "var(--text-secondary)" }}>
+            {isAdmin ? (
+              <>Signed in as <strong>Administrator</strong>. Full read-write privileges, telemetry purge, and playbooks unlocked.</>
+            ) : (
+              <>Signed in as <strong>Normal User (Operator)</strong>. Observability is enabled; admin cache operations are restricted.</>
+            )}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() => switchDemoRole(isAdmin ? "operator" : "admin")}
+          style={{ fontSize: 11, gap: 5 }}
+        >
+          <RefreshCw size={12} />
+          <span>Switch to {isAdmin ? "Normal User" : "Admin"}</span>
+        </button>
+      </div>
 
       <Tabs
         tabs={settingsTabs}
@@ -1083,9 +1121,11 @@ export default function SettingsPage() {
                     type="button"
                     className="btn btn-danger btn-sm"
                     onClick={handleClearLocalCache}
-                    style={{ gap: 6 }}
+                    disabled={!isAdmin}
+                    title={!isAdmin ? "Requires Administrator role" : "Clear local cache"}
+                    style={{ gap: 6, opacity: !isAdmin ? 0.5 : 1, cursor: !isAdmin ? "not-allowed" : "pointer" }}
                   >
-                    <Trash2 size={14} /> Flush Cache
+                    <Trash2 size={14} /> {!isAdmin ? "Flush (Admin Only)" : "Flush Cache"}
                   </button>
                 </div>
               </div>

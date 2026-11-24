@@ -21,6 +21,11 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
     
+    # Authentication & JWT configuration
+    JWT_SECRET_KEY: str = "logpilot-super-secret-jwt-signing-key-2026-production-ready"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
+    
     # Security and Upload
     MAX_UPLOAD_SIZE_MB: int = 25
     MAX_UPLOAD_RECORDS: int = 100000

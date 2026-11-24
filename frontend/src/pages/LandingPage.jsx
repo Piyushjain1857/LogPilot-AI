@@ -359,6 +359,13 @@ export default function LandingPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <ThemeToggle />
           <Button
+            to="/login"
+            variant="ghost"
+            size="sm"
+          >
+            Sign In
+          </Button>
+          <Button
             to="/app"
             variant="primary"
             size="sm"

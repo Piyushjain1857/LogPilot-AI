@@ -138,11 +138,67 @@ def migrate_sqlite_columns():
                 break
 
 
+def seed_default_users(db=None):
+    """Seeds default admin and normal users if they do not exist."""
+    try:
+        from app.models.user import User
+        from app.core.security import hash_password
+
+        def _seed(session):
+            default_accounts = [
+                {
+                    "username": "admin",
+                    "email": "admin@logpilot.ai",
+                    "password": "Admin@LogPilot2026!",
+                    "role": "admin",
+                    "full_name": "System Administrator",
+                },
+                {
+                    "username": "operator",
+                    "email": "operator@logpilot.ai",
+                    "password": "Operator@LogPilot2026!",
+                    "role": "normal",
+                    "full_name": "Observability Operator",
+                },
+                {
+                    "username": "normal",
+                    "email": "normal@logpilot.ai",
+                    "password": "Normal@LogPilot2026!",
+                    "role": "normal",
+                    "full_name": "Standard User",
+                },
+            ]
+            for acc in default_accounts:
+                existing = session.query(User).filter(User.username == acc["username"]).first()
+                if not existing:
+                    pwd_hash, salt = hash_password(acc["password"])
+                    user = User(
+                        username=acc["username"],
+                        email=acc["email"],
+                        hashed_password=pwd_hash,
+                        salt=salt,
+                        role=acc["role"],
+                        full_name=acc["full_name"],
+                        is_active=True,
+                    )
+                    session.add(user)
+            session.commit()
+
+        if db is not None:
+            _seed(db)
+        else:
+            with SessionLocal() as session:
+                _seed(session)
+    except Exception:
+        pass
+
+
 def init_db():
     """Idempotently initialize all database tables and apply column upgrades."""
     import app.models  # Ensure all models are registered with Base.metadata
     Base.metadata.create_all(bind=engine)
     migrate_sqlite_columns()
+    seed_default_users()
     try:
         from app.services.fts_service import FTSService
         FTSService.setup_fts_tables(engine)

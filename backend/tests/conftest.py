@@ -32,6 +32,8 @@ def db_session():
     """Create a fresh database session for each test function."""
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
+    from app.database.session import seed_default_users
+    seed_default_users(db=session)
     try:
         yield session
     finally:
