@@ -88,16 +88,15 @@ describe("Application Routing and Navigation", () => {
     expect(screen.getByText("INTELLIGENCE")).toBeInTheDocument();
   });
 
-  it("renders Placeholder View for future subsystem routes", async () => {
+  it("renders Troubleshooter view when navigating to /app/troubleshooter", async () => {
     render(
       <MemoryRouter initialEntries={["/app/troubleshooter"]}>
         <App />
       </MemoryRouter>
     );
 
-    const titles = await screen.findAllByText("AI Troubleshooter");
+    const titles = await screen.findAllByText(/Gemini AI Troubleshooter/i);
     expect(titles[0]).toBeInTheDocument();
-    expect(screen.getByText(/Gemini Core \(Phase 4\)/)).toBeInTheDocument();
   });
 
   it("renders NotFoundPage for unknown routes", () => {

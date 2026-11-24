@@ -21,20 +21,20 @@
 | **Phase 7** | Intelligent Anomaly Detection Engine | ✅ COMPLETED | 65/65 BE, 51/51 FE | `a510cff` | Synced |
 | **Phase 8** | Intelligent Log Clustering & Error Grouping | ✅ COMPLETED | 66/66 BE, 55/55 FE | `74af96d` | Synced |
 | **Phase 9** | Automated Incident Management System | ✅ COMPLETED | 68/68 BE, 59/59 FE | `3e03c9c` | Synced |
-| **Phase 10** | Evidence-Based Root Cause Analysis Engine | ✅ COMPLETED | 70/70 BE, 63/63 FE | `Pending` | In Progress Commit |
-| **Phase 11** | Gemini AI Troubleshooter & Agent System | 🔄 IN PROGRESS | Pending | TBD | Pending |
-| **Phase 12** | Intelligent Remediation & Automated Playbooks | ⏳ QUEUED | Pending | TBD | Pending |
+| **Phase 10** | Evidence-Based Root Cause Analysis Engine | ✅ COMPLETED | 70/70 BE, 63/63 FE | `8050035` | Synced |
+| **Phase 11** | Gemini AI Troubleshooter & Agent System | ✅ COMPLETED | 71/71 BE, 67/67 FE | `Pending` | In Progress Commit |
+| **Phase 12** | Intelligent Remediation & Automated Playbooks | 🔄 IN PROGRESS | Pending | TBD | Pending |
 | **Phase 13** | Premium Interactive Monitoring Dashboard | ⏳ QUEUED | Pending | TBD | Pending |
 | **Phase 14** | AI Chat Assistant & Professional Reporting | ⏳ QUEUED | Pending | TBD | Pending |
 | **Phase 15** | Final Security, Optimization, Demo & Deployment | ⏳ QUEUED | Pending | TBD | Pending |
 
 ---
 
-## Current Active Phase: Phase 11 — Gemini AI Troubleshooter & Agent System
+## Current Active Phase: Phase 12 — Intelligent Remediation & Automated Playbooks
 
 ### Objectives:
-- Official Google GenAI SDK integration (`google-genai`) with structured JSON schema outputs and graceful fallback when offline/unauthenticated.
-- ReAct Agentic Troubleshooting Loop: Autonomous diagnostic tool calling (`query_logs`, `inspect_trace`, `get_anomalies`, `get_service_topology`, `get_incident_detail`).
-- Strict grounding rules: Zero fabrication, zero arbitrary terminal execution; every assertion must cite actual log IDs and trace evidence.
-- Multi-perspective troubleshooting synthesis (DevOps, SRE, Security, Database, Software Architect).
-- Interactive AI Troubleshooter Workbench (`/app/troubleshooter`) with live streaming thought process, tool execution cards, verified findings, and markdown playbook recommendations.
+- Predefined verified playbook library for common cloud-native failure modes (DB pool exhaustion, OOM pod restart, circuit breaker recovery, ingress rate limit relaxation, disk overflow cleanup).
+- Human-in-the-Loop (HITL) approval workflows with explicit danger tiering (`SAFE`, `CAUTION`, `CRITICAL_DESTRUCTIVE`).
+- Safe execution sandbox simulation: dry-run preflight checks, simulated execution logs, post-execution verification checks, and automated rollback scripts.
+- Playbook Execution API (`/remediation/playbooks`, `/remediation/execute`, `/remediation/simulate`).
+- Interactive Remediation Console UI (`/app/remediation`) with step approval toggles, real-time simulated execution output terminal, and rollback triggers.

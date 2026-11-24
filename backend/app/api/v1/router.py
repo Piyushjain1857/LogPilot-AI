@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     clusters,
     incidents,
     root_cause,
+    troubleshooter,
 )
 
 api_router = APIRouter()
@@ -32,6 +33,7 @@ api_router.include_router(anomalies.router)
 api_router.include_router(clusters.router)
 api_router.include_router(incidents.router, prefix="/incidents", tags=["incidents"])
 api_router.include_router(root_cause.router, prefix="/root-cause", tags=["root_cause"])
+api_router.include_router(troubleshooter.router, prefix="/troubleshooter", tags=["troubleshooter"])
 api_router.include_router(logs.router)
 api_router.include_router(ingest.router)
 api_router.include_router(source_tokens.router)
