@@ -13,7 +13,7 @@ class AnalysisRun(Base):
     __tablename__ = "analysis_runs"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    incident_id = Column(String(36), ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False, index=True)
+    incident_id = Column(String(36), ForeignKey("incidents.id", ondelete="CASCADE"), nullable=True, index=True)
     analysis_type = Column(String(64), nullable=False)  # root_cause, anomaly, clustering
     status = Column(String(32), nullable=False, default="pending")  # pending, running, completed, failed
     summary = Column(Text, nullable=True)

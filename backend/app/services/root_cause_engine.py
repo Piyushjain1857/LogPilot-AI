@@ -433,15 +433,16 @@ class RootCauseEngine:
             root_node_id=top_service,
         )
 
+        downstream_count = max(0, len(candidate_scores) - 1)
         summary = (
             f"Automated RCA identified '{top_service}' as the root cause with {int(top_confidence * 100)}% confidence. "
-            f"Failure propagated to {len(candidate_scores) - 1} downstream services across {len(graph_edges)} dependency hops."
+            f"Failure propagated to {downstream_count} downstream services across {len(graph_edges)} dependency hops."
         )
 
         # Persist AnalysisRun
         analysis_run = AnalysisRun(
             id=str(uuid.uuid4()),
-            incident_id=incident.id if incident else (incident_id or str(uuid.uuid4())),
+            incident_id=incident.id if incident else None,
             analysis_type="root_cause",
             status="completed",
             summary=summary,

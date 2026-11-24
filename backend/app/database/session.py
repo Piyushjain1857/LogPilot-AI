@@ -107,6 +107,36 @@ def migrate_sqlite_columns():
                 conn.exec_driver_sql("ALTER TABLE log_sources ADD COLUMN total_failed_records INTEGER DEFAULT 0")
             conn.commit()
 
+        # Check analysis_runs table schema to ensure incident_id is nullable for window/ad-hoc scans
+        res_ar = conn.exec_driver_sql("PRAGMA table_info(analysis_runs)").fetchall()
+        for row in res_ar:
+            if row[1] == "incident_id" and row[3] == 1:
+                conn.exec_driver_sql("""
+                    CREATE TABLE IF NOT EXISTS analysis_runs_new (
+                        id VARCHAR(36) NOT NULL, 
+                        incident_id VARCHAR(36), 
+                        analysis_type VARCHAR(64) NOT NULL, 
+                        status VARCHAR(32) NOT NULL, 
+                        summary TEXT, 
+                        confidence_score FLOAT, 
+                        top_root_cause_service VARCHAR(128), 
+                        causal_graph_json TEXT, 
+                        hypotheses_json TEXT, 
+                        result_json TEXT, 
+                        evidence_json TEXT, 
+                        created_at DATETIME NOT NULL, 
+                        completed_at DATETIME, 
+                        PRIMARY KEY (id), 
+                        FOREIGN KEY(incident_id) REFERENCES incidents (id) ON DELETE CASCADE
+                    )
+                """)
+                conn.exec_driver_sql("INSERT INTO analysis_runs_new SELECT * FROM analysis_runs")
+                conn.exec_driver_sql("DROP TABLE analysis_runs")
+                conn.exec_driver_sql("ALTER TABLE analysis_runs_new RENAME TO analysis_runs")
+                conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_analysis_runs_incident_id ON analysis_runs (incident_id)")
+                conn.commit()
+                break
+
 
 def init_db():
     """Idempotently initialize all database tables and apply column upgrades."""

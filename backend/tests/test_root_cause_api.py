@@ -147,3 +147,17 @@ def test_analyze_root_cause_and_citations(client: TestClient, seed_rca_scenario)
     inc_data = inc_resp.json()
     assert inc_data["incident_id"] == "inc-rca-test"
     assert inc_data["top_root_cause_service"] == "payment-service"
+
+
+def test_analyze_root_cause_adhoc_window(client: TestClient):
+    """Verify ad-hoc/lookback window root cause analysis with incident_id=None succeeds."""
+    resp = client.post(
+        "/api/v1/root-cause/analyze",
+        json={"incident_id": None, "lookback_minutes": 60},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "completed"
+    assert data["incident_id"] is None
+    assert "graph" in data
+    assert len(data["graph"]["nodes"]) > 0
