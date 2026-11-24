@@ -1,336 +1,399 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
 import PageHeader from "../../components/common/PageHeader";
-import StatusBadge from "../../components/common/StatusBadge";
+import IncidentMetricCards from "../../components/incidents/IncidentMetricCards";
+import IncidentTable from "../../components/incidents/IncidentTable";
+import IncidentDetailDrawer from "../../components/incidents/IncidentDetailDrawer";
+import { incidentService } from "../../services/incidentService";
+import { logSourceService } from "../../services/logSourceService";
 import {
-  AlertOctagon,
-  Clock,
-  CheckCircle2,
-  Cpu,
-  ArrowRight,
+  RefreshCw,
   Search,
-  ExternalLink,
-  ChevronDown,
+  ChevronLeft,
   ChevronRight,
-  Bot,
-  Zap,
+  GitMerge,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function IncidentsPage() {
-  const navigate = useNavigate();
+  // Query & Filter states
+  const [search, setSearch] = useState("");
+  const [selectedService, setSelectedService] = useState("");
+  const [selectedSeverity, setSelectedSeverity] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [expandedIncident, setExpandedIncident] = useState("INC-101");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
-  const incidents = [
-    {
-      id: "INC-101",
-      title: "PostgreSQL Database Connection Pool Exhausted",
-      severity: "CRITICAL",
-      status: "active",
-      priority: "P1",
-      mttd: "420ms",
-      duration: "24m 12s",
-      affected_services: ["order-service", "inventory-service", "checkout-service", "db-primary.internal"],
-      first_detected: "2026-11-24 10:00:11 UTC",
-      last_detected: "2026-11-24 10:24:23 UTC",
-      root_cause: "Database connection pool saturated (max=100) causing cascading timeouts across dependent checkout order processing workers.",
-      trace_id: "b223-1109-ee74",
-      timeline: [
-        { time: "10:00:11.890Z", event: "PostgreSQL pool saturated (100/100 active connections) on db-primary:5432" },
-        { time: "10:00:12.311Z", event: "inventory-service blocked on lock contention: SELECT * FROM inventory_locks" },
-        { time: "10:00:14.650Z", event: "order-service checkout queue backed up, 18 requests waiting" },
-        { time: "10:00:18.005Z", event: "Circuit breaker order-service -> db-primary tripped to OPEN" },
-      ],
-    },
-    {
-      id: "INC-102",
-      title: "Canary Release Error Burst: checkout-service v2.4.1",
-      severity: "HIGH",
-      status: "resolved",
-      priority: "P2",
-      mttd: "1.2s",
-      duration: "12m 45s",
-      affected_services: ["checkout-service", "deploy-orchestrator"],
-      first_detected: "2026-11-24 09:45:07 UTC",
-      last_detected: "2026-11-24 09:57:52 UTC",
-      root_cause: "Unhandled KeyError 'tax_rate_id' during checkout calculation prompted automated canary rollback to v2.4.0.",
-      trace_id: "d991-8812-cc55",
-      timeline: [
-        { time: "09:45:07.120Z", event: "Canary deployment v2.4.1 began routing 10% of production traffic" },
-        { time: "09:46:12.440Z", event: "KeyError 'tax_rate_id' raised on CheckoutCalculator.py line 142" },
-        { time: "09:48:00.000Z", event: "Automated canary health probe failed (18.5% error rate > 1.0% limit)" },
-        { time: "09:48:30.000Z", event: "Rollback completed to v2.4.0, error rate returned to 0.02%" },
-      ],
-    },
-    {
-      id: "INC-103",
-      title: "Upstream Stripe Webhook Ingress Latency Spike",
-      severity: "WARNING",
-      status: "investigating",
-      priority: "P3",
-      mttd: "3.5s",
-      duration: "8m 10s",
-      affected_services: ["payment-service", "api-gateway"],
-      first_detected: "2026-11-24 10:15:00 UTC",
-      last_detected: "2026-11-24 10:23:10 UTC",
-      root_cause: "Stripe Connect webhook response delays exceeded 15,000ms causing synchronous payment workers to block.",
-      trace_id: "a118-7744-bb99",
-      timeline: [
-        { time: "10:15:00.000Z", event: "StripeConnect webhook latency increased from 240ms to 15,400ms" },
-        { time: "10:17:30.000Z", event: "api-gateway returned HTTP 504 Gateway Timeout for 4 client requests" },
-        { time: "10:20:00.000Z", event: "Async retry worker engaged, reducing client impact" },
-      ],
-    },
-  ];
+  // Data states
+  const [incidents, setIncidents] = useState([]);
+  const [statistics, setStatistics] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [availableServices, setAvailableServices] = useState([]);
 
-  const filtered = incidents.filter((i) => {
-    if (selectedStatus !== "ALL" && i.status.toUpperCase() !== selectedStatus) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = i.title.toLowerCase().includes(q);
-      const matchService = i.affected_services.some((s) => s.toLowerCase().includes(q));
-      const matchTrace = i.trace_id.toLowerCase().includes(q);
-      return matchTitle || matchService || matchTrace;
+  // Active drawer selection
+  const [selectedIncidentId, setSelectedIncidentId] = useState(null);
+  const [selectedIncidentDetail, setSelectedIncidentDetail] = useState(null);
+
+  // Loading & Action states
+  const [loading, setLoading] = useState(true);
+  const [correlating, setCorrelating] = useState(false);
+  const [correlationFeedback, setCorrelationFeedback] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch available services
+  useEffect(() => {
+    let mounted = true;
+    const fetchServices = async () => {
+      try {
+        const sources = await logSourceService.getSources();
+        if (mounted && Array.isArray(sources)) {
+          const svcs = [...new Set(sources.map((s) => s.service_name).filter(Boolean))];
+          setAvailableServices(svcs);
+        }
+      } catch (err) {
+        console.error("Failed to fetch services for incident filtering:", err);
+      }
+    };
+    fetchServices();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Fetch statistics
+  const fetchStatistics = useCallback(async () => {
+    try {
+      const stats = await incidentService.getStatistics();
+      setStatistics(stats);
+    } catch (err) {
+      console.error("Failed to fetch incident statistics:", err);
     }
-    return true;
-  });
+  }, []);
 
-  const toggleExpand = (id) => {
-    setExpandedIncident((prev) => (prev === id ? null : id));
+  // Fetch incidents list
+  const fetchIncidents = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await incidentService.listIncidents({
+        status: selectedStatus,
+        severity: selectedSeverity,
+        service: selectedService,
+        search,
+        page,
+        pageSize,
+      });
+      setIncidents(data.incidents || []);
+      setTotal(data.total || 0);
+      setTotalPages(data.total_pages || 1);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch incidents:", err);
+      setError("Failed to load incidents. Please verify backend service availability.");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedStatus, selectedSeverity, selectedService, search, page]);
+
+  useEffect(() => {
+    fetchStatistics();
+    fetchIncidents();
+  }, [fetchStatistics, fetchIncidents]);
+
+  // Fetch incident detail when drawer selected
+  const handleSelectIncident = async (id) => {
+    setSelectedIncidentId(id);
+    setDetailLoading(true);
+    try {
+      const detail = await incidentService.getIncidentDetail(id);
+      setSelectedIncidentDetail(detail);
+    } catch (err) {
+      console.error("Failed to load incident detail:", err);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleCloseDrawer = () => {
+    setSelectedIncidentId(null);
+    setSelectedIncidentDetail(null);
+  };
+
+  // Trigger automated correlation
+  const handleTriggerCorrelation = async () => {
+    setCorrelating(true);
+    setCorrelationFeedback(null);
+    try {
+      const res = await incidentService.correlateIncidents({ lookbackMinutes: 60 });
+      setCorrelationFeedback(
+        `Correlation completed: ${res.incidents_created} incidents created, ${res.incidents_updated} updated from ${res.anomalies_correlated} anomalies & ${res.clusters_correlated} error clusters.`
+      );
+      await fetchStatistics();
+      await fetchIncidents();
+      setTimeout(() => setCorrelationFeedback(null), 6000);
+    } catch (err) {
+      console.error("Incident correlation failed:", err);
+      setCorrelationFeedback("Correlation failed. Ensure anomaly detection runs exist.");
+      setTimeout(() => setCorrelationFeedback(null), 5000);
+    } finally {
+      setCorrelating(false);
+    }
+  };
+
+  // Status update handler
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      const updated = await incidentService.updateStatus(id, { status: newStatus });
+      if (selectedIncidentDetail && selectedIncidentDetail.id === id) {
+        setSelectedIncidentDetail(updated);
+      }
+      await fetchStatistics();
+      await fetchIncidents();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+    }
+  };
+
+  // Note handler
+  const handleAddNote = async (id, noteText) => {
+    try {
+      const updated = await incidentService.addNote(id, { note: noteText, author: "SRE Operator" });
+      if (selectedIncidentDetail && selectedIncidentDetail.id === id) {
+        setSelectedIncidentDetail(updated);
+      }
+    } catch (err) {
+      console.error("Failed to add note:", err);
+    }
   };
 
   return (
-    <div style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-      {/* Page Header */}
+    <div className="page-container">
       <PageHeader
-        title="Incident Command Center"
-        subtitle="Automated correlation of clustered log failures into consolidated incidents with severity triage and timeline evidence."
-        badge={
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <span className="badge badge-error">1 Active P1</span>
-            <span className="badge badge-warning">1 Investigating</span>
+        title="Incident Management Command Center"
+        description="Automated cross-service incident correlation, timeline reconstruction, and lifecycle tracking"
+        actions={
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => {
+                fetchStatistics();
+                fetchIncidents();
+              }}
+              disabled={loading}
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleTriggerCorrelation}
+              disabled={correlating}
+              style={{ gap: "6px" }}
+            >
+              <GitMerge size={14} className={correlating ? "animate-spin" : ""} />
+              {correlating ? "Correlating Signals..." : "Correlate Incidents"}
+            </button>
           </div>
         }
       />
 
-      {/* KPI Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "var(--space-4)" }}>
-        <div className="card" style={{ padding: "var(--space-4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>Active Incidents</span>
-            <AlertOctagon size={16} color="var(--status-error)" />
-          </div>
-          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--status-error)" }}>
-            1
-          </div>
-          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
-            P1 Database Pool Saturation
-          </div>
+      {/* KPI Cards */}
+      <IncidentMetricCards statistics={statistics} loading={loading} />
+
+      {/* Feedback Alert */}
+      {correlationFeedback && (
+        <div
+          style={{
+            margin: "16px 0",
+            padding: "10px 14px",
+            backgroundColor: "rgba(16, 185, 129, 0.12)",
+            border: "1px solid rgba(16, 185, 129, 0.3)",
+            borderRadius: "var(--radius-md)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            color: "var(--severity-success)",
+            fontSize: "13px",
+          }}
+        >
+          <CheckCircle2 size={16} />
+          <span>{correlationFeedback}</span>
         </div>
+      )}
 
-        <div className="card" style={{ padding: "var(--space-4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>Mean Time to Detect (MTTD)</span>
-            <Zap size={16} color="var(--accent-primary)" />
-          </div>
-          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--text-primary)" }}>
-            420ms
-          </div>
-          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
-            Log frequency burst threshold
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "var(--space-4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>Impacted Microservices</span>
-            <Cpu size={16} color="var(--status-warning)" />
-          </div>
-          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--text-primary)" }}>
-            4
-          </div>
-          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
-            order, inventory, checkout, db
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "var(--space-4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "var(--text-caption)", color: "var(--text-secondary)", fontWeight: 500 }}>Resolved Today</span>
-            <CheckCircle2 size={16} color="var(--status-success)" />
-          </div>
-          <div className="metric-value" style={{ fontSize: "24px", fontWeight: 700, marginTop: "var(--space-2)", color: "var(--status-success)" }}>
-            1
-          </div>
-          <div style={{ fontSize: "var(--text-micro)", color: "var(--text-muted)", marginTop: "var(--space-1)" }}>
-            Canary v2.4.1 rollback verified
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="card" style={{ padding: "var(--space-4)" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "var(--space-3)", alignItems: "center" }}>
-          {/* Status Tabs */}
-          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-            {["ALL", "ACTIVE", "INVESTIGATING", "RESOLVED"].map((st) => (
-              <button
-                key={st}
-                type="button"
-                className={`btn btn-xs ${selectedStatus === st ? "btn-primary" : "btn-secondary"}`}
-                onClick={() => setSelectedStatus(st)}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
-
-          {/* Search box */}
-          <div style={{ position: "relative", minWidth: 260 }}>
-            <Search size={14} color="var(--text-muted)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+      {/* Filter and Control Bar */}
+      <div
+        className="card"
+        style={{
+          marginTop: "16px",
+          marginBottom: "16px",
+          padding: "14px 16px",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "12px",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        {/* Left: Search input */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 260px" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: "340px" }}>
+            <Search
+              size={14}
+              style={{
+                position: "absolute",
+                left: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--text-muted)",
+              }}
+            />
             <input
               type="text"
-              placeholder="Filter by title, service, or trace ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: "100%",
-                height: 32,
-                paddingLeft: 32,
-                paddingRight: "var(--space-3)",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--border-subtle)",
-                backgroundColor: "var(--bg-surface)",
-                color: "var(--text-primary)",
-                fontSize: "var(--text-caption)",
+              className="form-control"
+              placeholder="Search incidents (e.g. INC-1001, Postgres, timeout)..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
               }}
+              style={{ paddingLeft: "32px", fontSize: "12px" }}
             />
           </div>
         </div>
+
+        {/* Right: Filter dropdowns */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Service filter */}
+          <select
+            className="form-control"
+            value={selectedService}
+            onChange={(e) => {
+              setSelectedService(e.target.value);
+              setPage(1);
+            }}
+            style={{ fontSize: "12px", width: "auto" }}
+          >
+            <option value="">All Services</option>
+            {availableServices.map((svc) => (
+              <option key={svc} value={svc}>
+                {svc}
+              </option>
+            ))}
+          </select>
+
+          {/* Severity filter */}
+          <select
+            className="form-control"
+            value={selectedSeverity}
+            onChange={(e) => {
+              setSelectedSeverity(e.target.value);
+              setPage(1);
+            }}
+            style={{ fontSize: "12px", width: "auto" }}
+          >
+            <option value="ALL">All Severities</option>
+            <option value="CRITICAL">CRITICAL</option>
+            <option value="HIGH">HIGH</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="LOW">LOW</option>
+          </select>
+
+          {/* Status filter */}
+          <select
+            className="form-control"
+            value={selectedStatus}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setPage(1);
+            }}
+            style={{ fontSize: "12px", width: "auto" }}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="investigating">Investigating</option>
+            <option value="mitigated">Mitigated</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
       </div>
 
-      {/* Incidents List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-        {filtered.map((inc) => {
-          const isExp = expandedIncident === inc.id;
-          const isCritical = inc.severity === "CRITICAL";
+      {/* Error state */}
+      {error && (
+        <div
+          style={{
+            padding: "12px 16px",
+            backgroundColor: "rgba(239, 68, 68, 0.12)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+            borderRadius: "var(--radius-md)",
+            color: "var(--severity-error)",
+            fontSize: "13px",
+            marginBottom: "16px",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-          return (
-            <div
-              key={inc.id}
-              className="card"
-              style={{
-                borderLeft: `4px solid ${isCritical ? "var(--status-critical)" : inc.severity === "HIGH" ? "var(--status-error)" : "var(--status-warning)"}`,
-                padding: "var(--space-5)",
-              }}
+      {/* Incidents Table */}
+      <IncidentTable
+        incidents={incidents}
+        loading={loading}
+        onSelectIncident={handleSelectIncident}
+        onUpdateStatus={handleUpdateStatus}
+      />
+
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div
+          style={{
+            marginTop: "16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontSize: "12px",
+            color: "var(--text-muted)",
+          }}
+        >
+          <span>
+            Showing page {page} of {totalPages} ({total} total incidents)
+          </span>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              style={{ padding: "4px 8px" }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "4px" }}>
-                    <span className="code-font" style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "13px" }}>
-                      {inc.id}
-                    </span>
-                    <span className={`badge ${isCritical ? "badge-error" : inc.severity === "HIGH" ? "badge-warning" : "badge-neutral"}`}>
-                      {inc.priority} • {inc.severity}
-                    </span>
-                    <StatusBadge status={inc.status} />
-                    <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
-                      <Clock size={12} /> Detected {inc.first_detected}
-                    </span>
-                  </div>
-                  <h3 style={{ fontSize: "var(--text-card-title)", fontWeight: 700, color: "var(--text-primary)" }}>
-                    {inc.title}
-                  </h3>
-                </div>
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              style={{ padding: "4px 8px" }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
-                <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => toggleExpand(inc.id)}
-                  >
-                    {isExp ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    {isExp ? "Hide Evidence" : "Investigate Evidence"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => navigate("/app/troubleshooter")}
-                  >
-                    <Bot size={14} /> AI Troubleshoot
-                  </button>
-                </div>
-              </div>
-
-              <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-body-sm)", marginBottom: "var(--space-4)", lineHeight: 1.6 }}>
-                <strong>Probable Cause:</strong> {inc.root_cause}
-              </p>
-
-              {/* Service tags & Trace ID */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-subtle)", paddingTop: "var(--space-3)", flexWrap: "wrap", gap: "var(--space-3)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "var(--text-caption)", color: "var(--text-muted)" }}>
-                  <span>Impacted Services:</span>
-                  {inc.affected_services.map((svc) => (
-                    <span key={svc} className="format-pill" style={{ color: "var(--accent-primary)" }}>
-                      {svc}
-                    </span>
-                  ))}
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-caption)" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Trace:</span>
-                  <span
-                    className="code-font"
-                    style={{ color: "var(--accent-secondary)", cursor: "pointer" }}
-                    onClick={() => navigate(`/app/log-explorer?search=${encodeURIComponent(inc.trace_id)}`)}
-                    title="Filter in Log Explorer"
-                  >
-                    {inc.trace_id} <ExternalLink size={11} style={{ display: "inline" }} />
-                  </span>
-                </div>
-              </div>
-
-              {/* Expandable Timeline & Diagnostics */}
-              {isExp && (
-                <div className="animate-slide-up" style={{ marginTop: "var(--space-4)", paddingTop: "var(--space-4)", borderTop: "1px dashed var(--border-subtle)" }}>
-                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "var(--space-3)" }}>
-                    Incident Causal Event Timeline
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                    {inc.timeline.map((item, idx) => (
-                      <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", fontSize: "var(--text-caption)" }}>
-                        <span className="code-font" style={{ color: "var(--text-muted)", fontSize: "11px", width: "120px", flexShrink: 0 }}>
-                          {item.time}
-                        </span>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: idx === 0 ? "var(--status-error)" : "var(--accent-primary)", marginTop: 5, flexShrink: 0 }} />
-                        <span style={{ color: "var(--text-primary)" }}>{item.event}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: "var(--space-4)", display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-xs"
-                      onClick={() => navigate(`/app/root-cause`)}
-                    >
-                      View Failure Propagation Graph <ArrowRight size={12} />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-xs"
-                      onClick={() => navigate(`/app/remediation`)}
-                    >
-                      View Mitigation Runbook
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* Detail Drawer */}
+      {selectedIncidentId && (
+        <IncidentDetailDrawer
+          incident={selectedIncidentDetail}
+          loading={detailLoading}
+          onClose={handleCloseDrawer}
+          onUpdateStatus={handleUpdateStatus}
+          onAddNote={handleAddNote}
+        />
+      )}
     </div>
   );
 }
