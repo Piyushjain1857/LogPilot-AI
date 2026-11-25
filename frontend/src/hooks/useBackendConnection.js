@@ -15,6 +15,7 @@ export function useBackendConnection(pollIntervalMs = 15000) {
 
   const abortControllerRef = useRef(null);
   const timeoutIdRef = useRef(null);
+  const failuresRef = useRef(0);
 
   const checkConnection = useCallback(async () => {
     if (abortControllerRef.current) {
@@ -31,6 +32,7 @@ export function useBackendConnection(pollIntervalMs = 15000) {
         setStatus("connected");
         setLatencyMs(elapsed);
         setLastConnectedAt(new Date().toISOString());
+        failuresRef.current = 0;
         setConsecutiveFailures(0);
       } else {
         setStatus("degraded");
@@ -39,11 +41,10 @@ export function useBackendConnection(pollIntervalMs = 15000) {
       if (err.name === "CanceledError" || err.name === "AbortError") {
         return;
       }
-      setConsecutiveFailures((prev) => {
-        const next = prev + 1;
-        setStatus(next > 1 ? "reconnecting" : "disconnected");
-        return next;
-      });
+      failuresRef.current += 1;
+      const count = failuresRef.current;
+      setStatus(count > 1 ? "reconnecting" : "disconnected");
+      setConsecutiveFailures(count);
       setLatencyMs(null);
     }
   }, []);
@@ -53,9 +54,10 @@ export function useBackendConnection(pollIntervalMs = 15000) {
     let isMounted = true;
 
     const scheduleNext = () => {
-      // If disconnected/reconnecting, back off: min(15000 * 1.5^failures, 60000)
-      const backoffMultiplier = Math.min(Math.pow(1.5, consecutiveFailures), 4);
-      const delay = Math.round(pollIntervalMs * (consecutiveFailures > 0 ? backoffMultiplier : 1));
+      // If disconnected/reconnecting, back off: min(pollIntervalMs * 1.5^failures, 60000)
+      const currentFailures = failuresRef.current;
+      const backoffMultiplier = Math.min(Math.pow(1.5, currentFailures), 4);
+      const delay = Math.round(pollIntervalMs * (currentFailures > 0 ? backoffMultiplier : 1));
 
       timeoutIdRef.current = setTimeout(async () => {
         if (!isMounted) return;
@@ -92,7 +94,7 @@ export function useBackendConnection(pollIntervalMs = 15000) {
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
     };
-  }, [checkConnection, pollIntervalMs, consecutiveFailures]);
+  }, [checkConnection, pollIntervalMs]);
 
   return {
     status,
