@@ -8,6 +8,17 @@ export default defineConfig({
     port: 5173,
     host: "127.0.0.1",
   },
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "lucide-react",
+      "axios",
+      "recharts",
+      "reactflow",
+    ],
+  },
   test: {
     globals: true,
     environment: "jsdom",
