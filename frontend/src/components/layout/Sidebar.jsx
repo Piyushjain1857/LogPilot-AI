@@ -16,6 +16,7 @@ import {
   Terminal,
   Play,
   Globe,
+  Sparkles,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -42,7 +43,7 @@ const NAVIGATION_GROUPS = [
       { path: "/app/incidents", label: "Incidents", icon: AlertTriangle, badge: "1", badgeVariant: "error" },
       { path: "/app/root-cause", label: "Root Cause Analysis", icon: GitBranch },
       { path: "/app/troubleshooter", label: "AI Troubleshooter", icon: Bot, badge: "AI", badgeVariant: "success" },
-      { path: "/app/assistant", label: "AI SRE Assistant", icon: Terminal, badge: "NLQ", badgeVariant: "neutral" },
+      { path: "/app/copilot", label: "AI Copilot", icon: Sparkles, badge: "GEMINI", badgeVariant: "primary" },
     ],
   },
   {

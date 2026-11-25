@@ -90,6 +90,7 @@ export default function App() {
                   <Route path="incidents" element={<IncidentsPage />} />
                   <Route path="root-cause" element={<RootCausePage />} />
                   <Route path="troubleshooter" element={<TroubleshooterPage />} />
+                  <Route path="copilot" element={<AIAssistantPage />} />
                   <Route path="assistant" element={<AIAssistantPage />} />
                   <Route path="remediation" element={<RemediationPage />} />
                   <Route path="reports" element={<ReportsPage />} />

@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     # Gemini AI configuration
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
+    AI_ENABLED: bool = True
+    AI_AUTO_ANALYSIS: bool = True
+    AI_MAX_RETRIES: int = 3
+    AI_TIMEOUT_SECONDS: int = 60
+    AI_CONFIDENCE_THRESHOLD: float = 0.80
     
     # CORS configuration
     CORS_ORIGINS: List[str] = [

@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   Radio,
+  Sparkles,
 } from "lucide-react";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -644,6 +645,20 @@ export default function WebsitesPage() {
                   <span className="ai-confidence-badge">
                     {aiDiagnosis?.confidence_level || "HIGH CONFIDENCE"}
                   </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={Sparkles}
+                    onClick={() =>
+                      navigate(
+                        `/app/copilot?siteId=${selectedSite.id}&query=${encodeURIComponent(
+                          `Investigate website ${selectedSite.name} (${selectedSite.url})`
+                        )}`
+                      )
+                    }
+                  >
+                    Ask AI Copilot
+                  </Button>
                   <Button
                     variant="primary"
                     size="sm"

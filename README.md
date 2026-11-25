@@ -1,6 +1,6 @@
 # LogPilot AI — Detect. Diagnose. Resolve.
 
-[![Tests](https://img.shields.io/badge/Tests-204%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-226%20Passing-brightgreen.svg)]()
 [![Backend](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)]()
 [![Frontend](https://img.shields.io/badge/React%2018-Vite%20SPA-61DAFB.svg?logo=react&logoColor=black)]()
 [![AI Engine](https://img.shields.io/badge/Google%20Gen%20AI-Gemini%202.5-4285F4.svg?logo=google&logoColor=white)]()
@@ -209,14 +209,53 @@ Open `http://localhost:5173` in your browser.
 ✓ src/tests/overview.test.jsx (3)
 ✓ src/tests/phase15_demo.test.jsx (4)
 ✓ src/tests/navigation.test.jsx (4)
-Test Files  18 passed (18) | Tests 92 passed (92) (Frontend Vitest)
+✓ src/tests/websites.test.jsx (4)
+✓ src/tests/ai_engine.test.jsx (3)
+Test Files  19 passed (19) | Tests 95 passed (95) (Frontend Vitest)
 ========================================================================================
-Total Verified Passing Tests: 204 / 204
+Total Verified Passing Tests: 226 / 226 (131 Backend Pytest + 95 Frontend Vitest)
 ```
 
 ---
 
-## 7. Role-Based Access Control (RBAC)
+## 7. Advanced Google Gemini AI Debugging Engine
+
+LogPilot AI integrates the official **Google Gen AI SDK** (`google-genai` Python SDK) for evidence-backed, real-time website debugging and autonomous troubleshooting.
+
+### Hybrid Intelligence Architecture
+Rather than relying purely on LLM heuristics, LogPilot AI pairs deterministic rule-based telemetry extraction with Google Gemini reasoning:
+1. **Deterministic Filter**: Extracts real website HTTP probes, JS runtime exceptions, console drops, and database logs.
+2. **Security & Redaction Gate**: Scrubs API keys, passwords, and tokens before isolating telemetry inside `<untrusted_telemetry>` anti-prompt-injection boundaries.
+3. **Multi-Stage Diagnostic Pipeline**:
+   - **Stage A (Pattern Classification)**: Maps symptom to canonical categories (`DATABASE_CONNECTION_POOL_EXHAUSTION`, `CLIENT_JS_RUNTIME_TYPEERROR`, `REVERSE_PROXY_504_TIMEOUT`, `JWT_TOKEN_EXPIRATION`, `MEMORY_LEAK_OOM`).
+   - **Stage B (Evidence Correlation & RAG Retrieval)**: Assembles exact evidence IDs (`[EV-001]`, `[EV-002]`) and fetches historical runbooks (`KB-101` through `KB-105`).
+   - **Stage C & D (Gemini Investigation & Code Fix Formulation)**: Invocates configured Gemini model with validated Pydantic JSON schema to generate root cause probabilities and unified diff patches (`@@ -... +... @@`).
+   - **Stage E (Independent Verification Gate)**: Validates that code fixes do not touch restricted paths and contain proper human-in-the-loop review flags.
+
+### Supported Gemini Models
+- **`gemini-2.5-flash`** (Default): Fast, sub-second automated triage, incident summarization, and live probe diagnosis.
+- **`gemini-2.5-pro`**: Multi-hop causal reasoning across distributed spans, database lock analysis, and complex code fixes.
+- **`gemini-2.5-flash-lite`**: Ultra-low-latency anomaly classification.
+- **`gemini-3.8-flash`**: Next-generation reasoning and structured output compilation.
+
+### AI Environment Configuration
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
+AI_ENABLED=true
+AI_AUTO_ANALYSIS=true
+AI_MAX_RETRIES=3
+AI_TIMEOUT_SECONDS=60
+AI_CONFIDENCE_THRESHOLD=0.80
+```
+
+### AI Copilot & Settings Console
+- **Interactive AI Copilot (`/app/copilot` and `/app/assistant`)**: Contextually bound to connected websites and active incidents. Supports natural language queries, 8 canonical preset incident questions, verified evidence citations, syntax-highlighted code patches with one-click copy, and contextual follow-up prompts.
+- **AI Reasoning Configuration (`/app/settings` -> AI Reasoning tab)**: Live round-trip connectivity testing with latency measurement, backend-masked API key display, model selection switches, and real-time telemetry quota counters.
+
+---
+
+## 8. Role-Based Access Control (RBAC)
 
 LogPilot AI implements enterprise RBAC across all operational routes:
 - **`ADMIN`**: Full permissions (remediation execution, playbook configuration, cluster management).

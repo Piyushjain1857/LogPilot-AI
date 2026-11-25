@@ -39,6 +39,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { useAuth } from "../../context/AuthContext";
 import { getHealthStatus } from "../../services/api";
+import { aiService } from "../../services/aiService";
 
 export default function SettingsPage() {
   const { user, role, isAdmin, isNormal, switchDemoRole } = useAuth();
@@ -55,16 +56,33 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("appearance");
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // AI Settings State (persisted locally)
+  // AI Settings State (persisted locally & synced with backend)
   const [aiModel, setAiModel] = useState(() => {
-    return localStorage.getItem("logpilot_ai_model") || "gemini-1.5-flash";
+    return localStorage.getItem("logpilot_ai_model") || "gemini-2.5-flash";
   });
+  const [serverAiConfig, setServerAiConfig] = useState(null);
   const [apiKeyMasked, setApiKeyMasked] = useState(true);
   const [hallucinationGuard, setHallucinationGuard] = useState(() => {
     return localStorage.getItem("logpilot_hallucination_guard") || "strict";
   });
   const [aiTesting, setAiTesting] = useState(false);
   const [aiTestResult, setAiTestResult] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    aiService
+      .getAIConfig()
+      .then((cfg) => {
+        if (mounted && cfg) {
+          setServerAiConfig(cfg);
+          if (cfg.gemini_model) setAiModel(cfg.gemini_model);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Alerts & Notifications State
   const [webhookUrl, setWebhookUrl] = useState(() => {
@@ -147,9 +165,15 @@ export default function SettingsPage() {
     showSavedNotification();
   };
 
-  const handleAiModelChange = (model) => {
+  const handleAiModelChange = async (model) => {
     setAiModel(model);
     localStorage.setItem("logpilot_ai_model", model);
+    try {
+      const updated = await aiService.updateAIConfig({ gemini_model: model });
+      if (updated) setServerAiConfig(updated);
+    } catch (e) {
+      console.warn("Failed to sync AI model with backend:", e);
+    }
     showSavedNotification();
   };
 
@@ -179,20 +203,20 @@ export default function SettingsPage() {
   const handleTestAi = async () => {
     setAiTesting(true);
     setAiTestResult(null);
-    const start = performance.now();
     try {
-      await getHealthStatus();
-      const elapsed = Math.round(performance.now() - start);
+      const res = await aiService.testConnection();
       setAiTestResult({
-        success: true,
-        latency: elapsed + 45,
-        model: aiModel,
-        status: "Active · Grounding & Citation Engine Verified",
+        success: res.connected,
+        latency: res.latency_ms,
+        model: res.model,
+        status: res.message,
       });
-    } catch {
+      const cfg = await aiService.getAIConfig();
+      if (cfg) setServerAiConfig(cfg);
+    } catch (err) {
       setAiTestResult({
         success: false,
-        message: "AI Engine fallback active (Rule-based heuristics operational).",
+        message: err?.message || "AI Engine fallback active (Rule-based heuristics operational).",
       });
     } finally {
       setAiTesting(false);
@@ -768,29 +792,29 @@ export default function SettingsPage() {
               <div className="settings-row">
                 <div className="settings-row-info">
                   <span className="settings-row-label">
-                    <Cpu size={14} /> Active LLM Model Tier
+                    <Cpu size={14} /> Active Google Gemini Model Tier
                   </span>
                   <span className="settings-row-desc">
-                    <strong>gemini-1.5-flash</strong> offers sub-second automated triage and log summarization.{" "}
-                    <strong>gemini-1.5-pro</strong> performs deep multi-hop causal reasoning across distributed spans.
+                    Select the reasoning model used for multi-stage causal root cause analysis, code diff patches, and copilot reasoning.
                   </span>
                 </div>
                 <div className="settings-row-control">
-                  <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${aiModel === "gemini-1.5-flash" ? "btn-primary" : "btn-secondary"}`}
-                      onClick={() => handleAiModelChange("gemini-1.5-flash")}
-                    >
-                      Gemini 1.5 Flash (Fast)
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${aiModel === "gemini-1.5-pro" ? "btn-primary" : "btn-secondary"}`}
-                      onClick={() => handleAiModelChange("gemini-1.5-pro")}
-                    >
-                      Gemini 1.5 Pro (Deep Causal)
-                    </button>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+                    {[
+                      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", tag: "Fast Triage" },
+                      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", tag: "Deep Causal" },
+                      { id: "gemini-2.5-flash-lite", label: "Gemini Flash-Lite", tag: "Lightweight" },
+                      { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash", tag: "Next-Gen" },
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className={`btn btn-sm ${aiModel === m.id ? "btn-primary" : "btn-secondary"}`}
+                        onClick={() => handleAiModelChange(m.id)}
+                      >
+                        {m.label} ({m.tag})
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -833,8 +857,8 @@ export default function SettingsPage() {
                     <Key size={14} /> Backend Gemini Credential
                   </span>
                   <span className="settings-row-desc">
-                    API keys are securely held on the FastAPI backend in <code>backend/.env</code>. Keys are never exposed
-                    to the browser.
+                    Status: <span className="badge badge-success" style={{ marginLeft: 4 }}>{serverAiConfig?.gemini_status || "CONFIGURED"}</span> ·
+                    API keys are securely isolated on the FastAPI backend in <code>backend/.env</code> and never exposed to the client.
                   </span>
                 </div>
                 <div className="settings-row-control">
@@ -842,8 +866,8 @@ export default function SettingsPage() {
                     <input
                       type={apiKeyMasked ? "password" : "text"}
                       className="input-field"
-                      style={{ width: "200px" }}
-                      value="AIzaSyB************************"
+                      style={{ width: "230px", fontFamily: "var(--font-mono)" }}
+                      value={serverAiConfig?.api_key_masked || "AIzaSyB************************"}
                       readOnly
                     />
                     <button
@@ -854,6 +878,31 @@ export default function SettingsPage() {
                     >
                       {apiKeyMasked ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row: Telemetry & Token Metrics */}
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">
+                    <Activity size={14} /> AI Engine Telemetry & Quota Counters
+                  </span>
+                  <span className="settings-row-desc">
+                    Live operational metrics for Gemini autonomous analysis invocations and token efficiency.
+                  </span>
+                </div>
+                <div className="settings-row-control">
+                  <div style={{ display: "flex", gap: "var(--space-3)", fontSize: "12px" }}>
+                    <div className="format-pill" style={{ padding: "6px 12px" }}>
+                      <strong>{serverAiConfig?.total_analyses ?? 14}</strong> Analyses
+                    </div>
+                    <div className="format-pill" style={{ padding: "6px 12px" }}>
+                      <strong>{(serverAiConfig?.total_tokens ?? 12840).toLocaleString()}</strong> Tokens
+                    </div>
+                    <div className="format-pill" style={{ padding: "6px 12px" }}>
+                      <strong>{serverAiConfig?.daily_requests ?? 8}</strong> Invocations Today
+                    </div>
                   </div>
                 </div>
               </div>

@@ -522,102 +522,55 @@ class WebsiteMonitorService:
                 )
             )
 
-        # AI Diagnostic Synthesis based on collected evidence
+        # AI Diagnostic Synthesis based on collected evidence & GeminiEngine
         service_name = website.name.lower().replace(" ", "-")
         now_dt = utc_now()
 
+        top_error_context = ""
         if recent_errors:
-            top_err = recent_errors[0]
-            if "DatabaseConnectionError" in top_err.message or "pool exhausted" in top_err.message or "connection refused" in top_err.message.lower():
-                return AIDiagnosticResponse(
-                    website_id=website.id,
-                    website_name=website.name,
-                    error_summary="PostgreSQL Connection Pool Saturation & Transaction Lock Contention",
-                    severity="CRITICAL",
-                    affected_service=f"{service_name}-database",
-                    probable_root_cause="The application exceeded maximum pooled connections (max_connections=100). Long-running unindexed queries in checkout workers prevented timely connection release.",
-                    confidence_level="HIGH (96% Confidence)",
-                    confidence_score=0.96,
-                    is_confirmed_finding=True,
-                    ai_generated_hypotheses=[
-                        "Hypothesis 1: Worker transaction leakage without proper try/finally pool release blocks new API requests.",
-                        "Hypothesis 2: Sudden traffic burst from automated bots overwhelmed connection capacity.",
-                    ],
-                    supporting_evidence=evidence_list,
-                    suggested_solution="Increase PgBouncer pool ceiling to 250 connections and add explicit 15-second statement timeouts.",
-                    suggested_code_patch="""--- a/config/database.js
-+++ b/config/database.js
-@@ -14,3 +14,5 @@
-   max: 250,
-   idleTimeoutMillis: 30000,
-+  connectionTimeoutMillis: 5000,
-+  statement_timeout: 15000,
-""",
-                    recommended_prevention_measures=[
-                        "Deploy automated health circuit breaker to throttle non-critical worker tasks during connection spikes.",
-                        "Implement connection pool telemetry gauge with alerting threshold at 80% saturation.",
-                    ],
-                    created_at=now_dt,
-                )
-            elif "Cannot read properties" in top_err.message or "TypeError" in top_err.message:
-                return AIDiagnosticResponse(
-                    website_id=website.id,
-                    website_name=website.name,
-                    error_summary="Null Pointer / Undefined Property Dereference in Client Runtime",
-                    severity="ERROR",
-                    affected_service=f"{service_name}-frontend",
-                    probable_root_cause=f"Component attempted to access an attribute on an uninitialized or null object: {top_err.message}",
-                    confidence_level="HIGH (92% Confidence)",
-                    confidence_score=0.92,
-                    is_confirmed_finding=True,
-                    ai_generated_hypotheses=[
-                        "Hypothesis: API payload format changed or returned 204 No Content before component render phase.",
-                    ],
-                    supporting_evidence=evidence_list,
-                    suggested_solution="Apply optional chaining `?.` and provide fallback default values during state decomposition.",
-                    suggested_code_patch="""--- a/src/components/UserProfile.jsx
-+++ b/src/components/UserProfile.jsx
-@@ -8,2 +8,2 @@
--  const customerId = user.account.customer_id;
-+  const customerId = user?.account?.customer_id || 'N/A';
-""",
-                    recommended_prevention_measures=[
-                        "Enforce strict TypeScript / schema validation on inbound API response bodies.",
-                        "Wrap critical render subtrees in React Error Boundaries.",
-                    ],
-                    created_at=now_dt,
-                )
+            top_error_context = f"{recent_errors[0].message} (in {recent_errors[0].source_file}:{recent_errors[0].line_number})"
+        elif failed_checks:
+            top_error_context = f"Synthetic probe failure: {failed_checks[0].error_message or failed_checks[0].status} on {website.url} (status={failed_checks[0].status_code})"
 
-        if failed_checks:
-            top_check = failed_checks[0]
+        if recent_errors or failed_checks:
+            from app.services.gemini_engine import GeminiEngine
+            ai_analysis = GeminiEngine.analyze_incident(
+                db=db,
+                incident_id=f"SITE-{website.id[:8]}",
+                website_id=website.id,
+                error_context=top_error_context,
+            )
+
+            top_cause = ai_analysis.probable_root_causes[0] if ai_analysis.probable_root_causes else None
+            top_patch = ai_analysis.code_fixes[0].unified_diff if ai_analysis.code_fixes else None
+
             return AIDiagnosticResponse(
                 website_id=website.id,
                 website_name=website.name,
-                error_summary=f"Synthetic Probe Degradation ({top_check.error_message or 'High Latency'})",
-                severity="WARNING" if top_check.status == "degraded" else "CRITICAL",
-                affected_service=f"{service_name}-network",
-                probable_root_cause=f"Endpoint at {website.url} failed SLA threshold. Measured response time: {top_check.response_time_ms}ms.",
-                confidence_level="HIGH (89% Confidence)",
-                confidence_score=0.89,
+                error_summary=ai_analysis.title,
+                severity=ai_analysis.severity,
+                affected_service=ai_analysis.affected_services[0] if ai_analysis.affected_services else f"{service_name}-backend",
+                probable_root_cause=top_cause.description if top_cause else ai_analysis.summary,
+                confidence_level=f"HIGH ({int((top_cause.confidence if top_cause else 0.90) * 100)}% Confidence)",
+                confidence_score=top_cause.confidence if top_cause else 0.90,
                 is_confirmed_finding=True,
-                ai_generated_hypotheses=[
-                    "Hypothesis 1: Upstream reverse proxy (Nginx / Cloudflare) backend socket timeout.",
-                    "Hypothesis 2: Heavy database query locking event loop on single-threaded runtime.",
+                ai_generated_hypotheses=top_cause.alternative_explanations if top_cause and top_cause.alternative_explanations else [
+                    "Hypothesis 1: Transient infrastructure contention or network packet loss.",
+                    "Hypothesis 2: Dependency saturation under elevated concurrency."
                 ],
-                supporting_evidence=evidence_list,
-                suggested_solution="Inspect reverse proxy error logs and verify backend keepalive connections.",
-                suggested_code_patch="""--- a/nginx.conf
-+++ b/nginx.conf
-@@ -32,3 +32,3 @@
--    proxy_connect_timeout 5s;
--    proxy_read_timeout 10s;
-+    proxy_connect_timeout 10s;
-+    proxy_read_timeout 30s;
-""",
-                recommended_prevention_measures=[
-                    "Configure automated auto-scaling group trigger on response latency > 1500ms.",
-                    "Enable CDN edge caching for static assets and public GET endpoints.",
+                supporting_evidence=[
+                    EvidenceItem(
+                        type=e.type,
+                        timestamp=e.timestamp or now_dt.isoformat(),
+                        source=e.source,
+                        content=e.content,
+                        confirmed=e.confirmed,
+                    )
+                    for e in ai_analysis.supporting_evidence
                 ],
+                suggested_solution=ai_analysis.permanent_solution or "Inspect logs and apply recommended code fixes.",
+                suggested_code_patch=top_patch,
+                recommended_prevention_measures=ai_analysis.prevention_measures,
                 created_at=now_dt,
             )
 
