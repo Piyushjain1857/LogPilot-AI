@@ -177,3 +177,28 @@ def test_register_short_password_validation(client: TestClient):
     )
     assert response.status_code == 400
     assert "at least 6 characters" in response.json()["detail"]
+
+
+def test_auth_demo_login_admin(client: TestClient):
+    response = client.post(
+        "/api/v1/auth/demo-login",
+        json={"role": "admin"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert data["role"] == "admin"
+    assert data["user"]["username"] == "admin"
+
+
+def test_auth_demo_login_analyst(client: TestClient):
+    response = client.post(
+        "/api/v1/auth/demo-login",
+        json={"role": "analyst"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert data["role"] == "normal"
+    assert data["user"]["username"] == "operator"
+

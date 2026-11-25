@@ -205,6 +205,11 @@ export const getDemoAccounts = async () => {
   return response.data;
 };
 
+export const loginDemoRole = async (role = "analyst") => {
+  const response = await apiClient.post("/auth/demo-login", { role });
+  return response.data;
+};
+
 export { uploadService } from "./uploadService";
 export { logSourceService } from "./logSourceService";
 export { logService } from "./logService";

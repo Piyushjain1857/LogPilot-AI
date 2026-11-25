@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { login as apiLogin, register as apiRegister, logout as apiLogout, getCurrentUserProfile } from "../services/api";
+import {
+  login as apiLogin,
+  register as apiRegister,
+  logout as apiLogout,
+  getCurrentUserProfile,
+  loginDemoRole as apiLoginDemo,
+} from "../services/api";
 
 const AuthContext = createContext({
   user: null,
@@ -13,6 +19,7 @@ const AuthContext = createContext({
   register: async () => {},
   logout: () => {},
   switchDemoRole: async () => {},
+  loginDemo: async () => {},
 });
 
 export const TOKEN_STORAGE_KEY = "logpilot_access_token";
@@ -141,12 +148,38 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const switchDemoRole = useCallback(async (targetRole) => {
-    const creds = targetRole.toLowerCase() === "admin"
-      ? { username: "admin", password: "Admin@LogPilot2026!" }
-      : { username: "operator", password: "Operator@LogPilot2026!" };
-    return await login(creds.username, creds.password);
-  }, [login]);
+  const loginDemo = useCallback(async (targetRole) => {
+    setLoading(true);
+    try {
+      let data;
+      try {
+        data = await apiLoginDemo(targetRole);
+      } catch {
+        const creds =
+          (targetRole || "").toLowerCase() === "admin"
+            ? { username: "admin", password: "Admin@LogPilot2026!" }
+            : { username: "operator", password: "Operator@LogPilot2026!" };
+        data = await apiLogin(creds.username, creds.password);
+      }
+      setToken(data.access_token);
+      setUser(data.user);
+      try {
+        localStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+        localStorage.removeItem(LOGGED_OUT_KEY);
+      } catch {}
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const switchDemoRole = useCallback(
+    async (targetRole) => {
+      return await loginDemo(targetRole);
+    },
+    [loginDemo]
+  );
 
   const rawRole = (user?.role || "").toLowerCase();
   const isAuthenticated = Boolean(token && user);
@@ -167,6 +200,7 @@ export function AuthProvider({ children }) {
         register,
         logout,
         switchDemoRole,
+        loginDemo,
       }}
     >
       {children}

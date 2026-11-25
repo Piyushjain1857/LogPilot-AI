@@ -40,3 +40,8 @@ class DemoAccount(BaseModel):
     role: str
     label: str
     description: str
+
+
+class DemoLoginRequest(BaseModel):
+    role: str = "analyst"  # "admin" | "analyst" | "normal"
+

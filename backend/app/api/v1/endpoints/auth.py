@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.database.session import get_db
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserOut, DemoAccount
+from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserOut, DemoAccount, DemoLoginRequest
 from app.core.security import verify_password, hash_password, create_access_token
 from app.core.rbac import get_current_authenticated_user
 
@@ -161,26 +161,66 @@ def logout():
     }
 
 
+@router.post("/demo-login", response_model=TokenResponse)
+def demo_login(demo_req: DemoLoginRequest, db: Session = Depends(get_db)):
+    """
+    Secure isolated 1-click evaluation demo login.
+    Issues signed JWT for Administrator or Analyst without exposing credentials in frontend source code.
+    """
+    requested_role = demo_req.role.strip().lower()
+    if requested_role in ("admin", "administrator"):
+        target_username = "admin"
+    else:
+        target_username = "operator"
+
+    user = db.query(User).filter(User.username == target_username).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pre-seeded demo user for role '{requested_role}' not found.",
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo account is deactivated.",
+        )
+
+    token_claims = {
+        "sub": user.username,
+        "user_id": user.id,
+        "role": user.role.lower(),
+        "email": user.email,
+        "is_demo": True,
+    }
+    access_token = create_access_token(data=token_claims)
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        role=user.role.lower(),
+        user=UserOut.model_validate(user),
+    )
+
+
 @router.get("/demo-accounts")
 def get_demo_accounts():
     """
-    Provides pre-seeded demo credentials for instant 1-click evaluation of both
-    'admin' and 'normal' roles.
+    Provides pre-seeded demo metadata for instant 1-click evaluation of both
+    'admin' and 'analyst' (normal) roles without exposing raw credentials.
     """
     return {
         "accounts": [
             {
                 "username": "admin",
-                "password": "Admin@LogPilot2026!",
                 "role": "admin",
                 "label": "Administrator",
                 "description": "Full platform control: system settings, incident remediation, telemetry export, and cluster policies.",
             },
             {
                 "username": "operator",
-                "password": "Operator@LogPilot2026!",
                 "role": "normal",
-                "label": "Normal User / Operator",
+                "label": "Analyst",
                 "description": "Operational observability: live streaming, logs, distributed traces, and root cause diagnosis.",
             },
         ]
