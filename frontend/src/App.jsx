@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
+import WebsitesPage from "./pages/WebsitesPage";
 import LiveLogsPage from "./pages/placeholders/LiveLogsPage";
 import LogSourcesPage from "./pages/placeholders/LogSourcesPage";
 import LogExplorerPage from "./pages/placeholders/LogExplorerPage";
@@ -66,6 +67,8 @@ export default function App() {
               {/* Console Application Shell */}
               <Route path="/app" element={<ProtectedAppShell />}>
                 <Route index element={<OverviewPage />} />
+                <Route path="websites" element={<WebsitesPage />} />
+                <Route path="websites/:websiteId" element={<WebsitesPage />} />
                 <Route path="live-logs" element={<LiveLogsPage />} />
                 <Route path="log-sources" element={<LogSourcesPage />} />
                 <Route path="log-explorer" element={<LogExplorerPage />} />

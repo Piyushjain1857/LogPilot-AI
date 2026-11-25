@@ -1,6 +1,6 @@
 # LogPilot AI — Detect. Diagnose. Resolve.
 
-[![Tests](https://img.shields.io/badge/Tests-178%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-204%20Passing-brightgreen.svg)]()
 [![Backend](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)]()
 [![Frontend](https://img.shields.io/badge/React%2018-Vite%20SPA-61DAFB.svg?logo=react&logoColor=black)]()
 [![AI Engine](https://img.shields.io/badge/Google%20Gen%20AI-Gemini%202.5-4285F4.svg?logo=google&logoColor=white)]()
@@ -46,7 +46,8 @@ Modern distributed cloud environments produce millions of telemetry events per m
 | **Phase 12** | Intelligent Remediation & Automated Playbooks (Sandbox, HITL, Rollback) | ✅ 100% Complete | 150 Tests |
 | **Phase 13** | Premium Interactive Monitoring Dashboard (Pulse Banner, Service Matrix) | ✅ 100% Complete | 157 Tests |
 | **Phase 14** | AI Chat Assistant & Professional Reporting (ReportLab PDF, NLQ Compiler) | ✅ 100% Complete | 168 Tests |
-| **Phase 15** | Final Security, RBAC, 7-Stage Demo & Production Docker Deployment | ✅ 100% Complete | **178 Tests** |
+| **Phase 15** | Final Security, RBAC, 7-Stage Demo & Production Docker Deployment | ✅ 100% Complete | 178 Tests |
+| **Phase 16** | Real-Time Live Website Monitoring, JS SDK, Fault Injection & AI Patches | ✅ 100% Complete | **204 Tests** |
 
 ---
 
@@ -112,11 +113,34 @@ Judges and evaluators can experience the full self-healing workflow in seconds:
 6. Autonomous Gemini AI SRE diagnosis
 7. Sandboxed remediation execution and ReportLab executive PDF post-mortem download
 
+### 5. Real-Time Live Website Monitoring & Telemetry SDK (`/app/websites`)
+Connect and monitor any public or microservice website with enterprise-grade safeguards:
+- **SSRF Defense Protection:** Prohibits private networks (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopbacks (`127.0.0.0/8`), link-local (`169.254.0.0/16`), and AWS/GCP cloud metadata IP endpoints (`169.254.169.254`).
+- **Comprehensive Synthetic Probing:** Measures HTTP latency, availability, DNS resolution time, and TLS/SSL certificate expiration days in real-time.
+- **Client-Side Telemetry SDK (`logpilot-sdk.js`):** Intercepts uncaught runtime JS errors, unhandled promise rejections, failed API fetch/XHR calls, console errors, and Core Web Vitals (FCP, LCP, CLS, TTFB) with in-flight credential masking.
+- **Root Cause & Code Patch Generation:** Direct stack trace correlation with repository sources providing review-only git diff patches.
+- **Hackathon Fault Injection Storefront (`http://localhost:5174`):** Interactive sandbox with 6 controlled chaos failure triggers (HTTP 500, 404, DB pool exhaustion, 3.5s latency timeout, unhandled TypeError, service crash).
+
 ---
 
 ## 5. Quickstart & Deployment
 
-### Option A: Docker Compose (Single-Command Production Run)
+### Option A: Unified Full-Stack Runner (Recommended for Evaluation)
+```bash
+# Launch Backend (8000), Frontend (5173), and Demo Storefront (5174) with 1 command
+python3 run_all.py
+# Or using the shell script:
+./scripts/dev.sh
+```
+
+- **LogPilot AI Console:** `http://localhost:5173`
+- **Connected Websites Dashboard:** `http://localhost:5173/app/websites`
+- **Hackathon Demo Storefront (Fault Injection):** `http://localhost:5174`
+- **FastAPI OpenAPI Docs:** `http://127.0.0.1:8000/docs`
+
+---
+
+### Option B: Docker Compose (Single-Command Production Run)
 ```bash
 # Clone the repository
 git clone https://github.com/Piyushjain1857/LogPilot-AI.git
@@ -129,7 +153,7 @@ Navigate to `http://localhost:8000` to access the full console!
 
 ---
 
-### Option B: Local Development Setup
+### Option C: Individual Component Setup
 
 #### 1. Backend Setup (Python 3.11 / 3.12)
 ```bash
@@ -138,7 +162,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Run backend test suite (95 tests passing)
+# Run backend test suite (112 tests passing)
 pytest
 
 # Launch backend API server
@@ -150,7 +174,7 @@ uvicorn app.main:app --reload --port 8000
 cd frontend
 npm install
 
-# Run frontend test suite (83 tests passing)
+# Run frontend test suite (92 tests passing)
 npm test -- --run
 
 # Run ESLint validation
@@ -166,26 +190,28 @@ Open `http://localhost:5173` in your browser.
 ## 6. Comprehensive Test Verification
 
 ```bash
-========================= 95 passed in 1.61s (Backend Pytest) =========================
+======================== 112 passed in 21.69s (Backend Pytest) ========================
 ✓ src/tests/phase5_streaming.test.jsx (13)
 ✓ src/tests/phase14_reports.test.jsx (4)
 ✓ src/tests/phase11_troubleshooter.test.jsx (4)
+✓ src/tests/websites.test.jsx (4)
 ✓ src/tests/phase10_root_cause.test.jsx (4)
 ✓ src/tests/phase9_incidents.test.jsx (4)
-✓ src/tests/phase12_remediation.test.jsx (4)
 ✓ src/tests/phase8_clustering.test.jsx (4)
 ✓ src/tests/phase7_anomalies.test.jsx (5)
 ✓ src/tests/phase3_ingestion.test.jsx (8)
+✓ src/tests/phase12_remediation.test.jsx (4)
 ✓ src/tests/phase6_search_traces.test.jsx (6)
-✓ src/tests/components.test.jsx (7)
+✓ src/tests/auth.test.jsx (5)
 ✓ src/tests/phase2_ui.test.jsx (5)
-✓ src/tests/phase15_demo.test.jsx (4)
+✓ src/tests/components.test.jsx (7)
 ✓ src/tests/phase13_dashboard.test.jsx (4)
 ✓ src/tests/overview.test.jsx (3)
+✓ src/tests/phase15_demo.test.jsx (4)
 ✓ src/tests/navigation.test.jsx (4)
-Test Files  16 passed (16) | Tests 83 passed (83) (Frontend Vitest)
+Test Files  18 passed (18) | Tests 92 passed (92) (Frontend Vitest)
 ========================================================================================
-Total Verified Passing Tests: 178 / 178
+Total Verified Passing Tests: 204 / 204
 ```
 
 ---
@@ -207,6 +233,8 @@ Header authentication: `X-LogPilot-Role: <ADMIN|ANALYST|VIEWER>` or `Authorizati
 - **Master Development Progress Tracker:** [`docs/MASTER_PROGRESS.md`](file:///Users/piyush/Documents/LogPilot%20AI/docs/MASTER_PROGRESS.md)
 - **Remediation Runbook Catalog:** [`docs/REMEDIATION_PLAYBOOKS.md`](file:///Users/piyush/Documents/LogPilot%20AI/docs/REMEDIATION_PLAYBOOKS.md)
 - **Design System Guidelines:** [`docs/DESIGN_SYSTEM.md`](file:///Users/piyush/Documents/LogPilot%20AI/docs/DESIGN_SYSTEM.md)
+- **Live Connected Websites Console:** `http://localhost:5173/app/websites`
+- **Chaos Fault Storefront Demo:** `http://localhost:5174`
 - **Interactive 7-Stage Demo Page:** `http://localhost:8000/app/demo` (or `http://localhost:5173/app/demo`)
 
 ---

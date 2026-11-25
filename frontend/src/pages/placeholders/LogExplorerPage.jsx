@@ -112,22 +112,35 @@ export default function LogExplorerPage() {
       };
 
       let res;
-      try {
-        res = await searchService.advancedSearch(payload);
-      } catch (searchErr) {
-        if (logService && typeof logService.listLogs === "function") {
-          try {
-            res = await logService.listLogs({
-              page,
-              page_size: pageSize,
-              severity: severity !== "ALL" ? severity : undefined,
-              service_name: serviceName.trim() || undefined,
-            });
-          } catch (_) {
+      if (!query.trim() && !selectedSourceId) {
+        try {
+          res = await logService.listLogs({
+            page,
+            page_size: pageSize,
+            severity: severity !== "ALL" ? severity : undefined,
+            service_name: serviceName.trim() || undefined,
+          });
+        } catch (listErr) {
+          res = await searchService.advancedSearch(payload);
+        }
+      } else {
+        try {
+          res = await searchService.advancedSearch(payload);
+        } catch (searchErr) {
+          if (logService && typeof logService.listLogs === "function") {
+            try {
+              res = await logService.listLogs({
+                page,
+                page_size: pageSize,
+                severity: severity !== "ALL" ? severity : undefined,
+                service_name: serviceName.trim() || undefined,
+              });
+            } catch (_) {
+              throw searchErr;
+            }
+          } else {
             throw searchErr;
           }
-        } else {
-          throw searchErr;
         }
       }
       setLogs(res.items || []);

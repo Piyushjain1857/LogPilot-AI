@@ -15,6 +15,7 @@ import {
   Settings,
   Terminal,
   Play,
+  Globe,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const NAVIGATION_GROUPS = [
     title: "MONITORING",
     items: [
       { path: "/app", label: "Overview", icon: LayoutDashboard, end: true },
+      { path: "/app/websites", label: "Connect Website", icon: Globe, badge: "LIVE", badgeVariant: "success" },
       { path: "/app/live-logs", label: "Live Logs", icon: Radio, pulse: true },
       { path: "/app/log-explorer", label: "Log Explorer", icon: FileSearch },
       { path: "/app/traces", label: "Trace Explorer", icon: GitBranch },

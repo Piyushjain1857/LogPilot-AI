@@ -193,12 +193,48 @@ def seed_default_users(db=None):
         pass
 
 
+def seed_demo_website(db=None):
+    """Seeds the default Hackathon Demo Storefront website for instant live evaluation."""
+    try:
+        from app.models.website import MonitoredWebsite
+
+        def _seed(session):
+            demo_key = "lp_live_hackathon_demo"
+            existing = session.query(MonitoredWebsite).filter(MonitoredWebsite.ingestion_key == demo_key).first()
+            if not existing:
+                site = MonitoredWebsite(
+                    id="site-demo-hackathon-storefront",
+                    name="Hackathon Demo Storefront",
+                    url="http://localhost:5174/health",
+                    ingestion_key=demo_key,
+                    status="active",
+                    interval_seconds=15,
+                    check_ssl=False,
+                    check_dns=True,
+                    expected_status_code=200,
+                    timeout_seconds=5.0,
+                    github_repo="acme/storefront-app",
+                    github_branch="main",
+                )
+                session.add(site)
+                session.commit()
+
+        if db is not None:
+            _seed(db)
+        else:
+            with SessionLocal() as session:
+                _seed(session)
+    except Exception:
+        pass
+
+
 def init_db():
     """Idempotently initialize all database tables and apply column upgrades."""
     import app.models  # Ensure all models are registered with Base.metadata
     Base.metadata.create_all(bind=engine)
     migrate_sqlite_columns()
     seed_default_users()
+    seed_demo_website()
     try:
         from app.services.fts_service import FTSService
         FTSService.setup_fts_tables(engine)

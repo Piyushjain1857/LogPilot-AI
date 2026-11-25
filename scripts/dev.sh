@@ -20,6 +20,7 @@ fi
 
 BACKEND_PID=""
 FRONTEND_PID=""
+DEMO_PID=""
 
 cleanup() {
     echo ""
@@ -28,11 +29,16 @@ cleanup() {
         echo "Stopping Backend (PID: $BACKEND_PID)..."
         kill -TERM "$BACKEND_PID" 2>/dev/null || true
     fi
+    if [ -n "$DEMO_PID" ] && kill -0 "$DEMO_PID" 2>/dev/null; then
+        echo "Stopping Fault Demo App (PID: $DEMO_PID)..."
+        kill -TERM "$DEMO_PID" 2>/dev/null || true
+    fi
     if [ -n "$FRONTEND_PID" ] && kill -0 "$FRONTEND_PID" 2>/dev/null; then
         echo "Stopping Frontend (PID: $FRONTEND_PID)..."
         kill -TERM "$FRONTEND_PID" 2>/dev/null || true
     fi
     wait "$BACKEND_PID" 2>/dev/null || true
+    wait "$DEMO_PID" 2>/dev/null || true
     wait "$FRONTEND_PID" 2>/dev/null || true
     echo "✓ All services stopped cleanly."
     exit 0
@@ -47,6 +53,12 @@ source .venv/bin/activate
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 &
 BACKEND_PID=$!
 
+# Start Hackathon Fault Demo
+echo "--> Starting Hackathon Fault Demo on http://localhost:5174..."
+cd "$PROJECT_ROOT"
+python3 demo-app/server.py &
+DEMO_PID=$!
+
 # Start Frontend
 echo "--> Starting Vite Frontend on http://localhost:5173..."
 cd "$PROJECT_ROOT/frontend"
@@ -60,10 +72,10 @@ sleep 2
 echo ""
 echo "=========================================================="
 echo "🚀 LogPilot AI Services are running:"
-echo "   • Frontend:    http://localhost:5173"
-echo "   • Backend:     http://127.0.0.1:8000"
-echo "   • Swagger UI:  http://127.0.0.1:8000/docs"
-echo "   • ReDoc:       http://127.0.0.1:8000/redoc"
+echo "   • Observability Console: http://localhost:5173/app/websites"
+echo "   • Fault Injection Demo:  http://localhost:5174"
+echo "   • FastAPI Backend:       http://127.0.0.1:8000"
+echo "   • Swagger API Docs:      http://127.0.0.1:8000/docs"
 echo "=========================================================="
 echo "Press Ctrl+C to stop both servers."
 echo ""
