@@ -10,6 +10,7 @@
   --bg-sidebar: #0D1422;
   --bg-header: #111827;
   --bg-surface: #151E2E;
+  --bg-card: #151E2E;
   --bg-elevated: #1B2638;
   --bg-hover: #202D40;
   --bg-input: #0B111E;
@@ -76,6 +77,7 @@
   --bg-sidebar: #FFFFFF;
   --bg-header: #FFFFFF;
   --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
   --bg-elevated: #F1F5F9;
   --bg-hover: #E2E8F0;
   --bg-input: #FFFFFF;

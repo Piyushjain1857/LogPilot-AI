@@ -24,6 +24,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import Button from "../components/common/Button";
 import ThemeToggle from "../components/common/ThemeToggle";
+import "../styles/auth.css";
 
 export default function LoginPage() {
   const navigate = useNavigate();
