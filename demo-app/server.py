@@ -359,14 +359,15 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         # 2. Health check endpoint (Monitored by LogPilot AI probe!)
         if parsed.path == "/health":
-            self._send_cors_headers()
             if SERVER_STATE["simulate_down"]:
                 self.send_response(503)
+                self._send_cors_headers()
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(b'{"status":"down","error":"Service Unavailable: Database Connection Failure"}')
             else:
                 self.send_response(200)
+                self._send_cors_headers()
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(b'{"status":"healthy","uptime_seconds":1420,"version":"1.4.0"}')
@@ -374,8 +375,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         # 3. Simulate HTTP 500
         if parsed.path == "/api/simulate/server-error":
-            self._send_cors_headers()
             self.send_response(500)
+            self._send_cors_headers()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"error":"InternalServerError","message":"NullPointerException at OrderCalculator.java:104"}')
@@ -383,8 +384,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         # 4. Simulate HTTP 404
         if parsed.path == "/api/simulate/not-found":
-            self._send_cors_headers()
             self.send_response(404)
+            self._send_cors_headers()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"error":"NotFound","message":"Endpoint /api/v1/broken-link was not found on this server"}')
@@ -393,16 +394,16 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         # 5. Simulate Slow API (3500ms delay)
         if parsed.path == "/api/simulate/slow-api":
             time.sleep(3.5)
-            self._send_cors_headers()
             self.send_response(200)
+            self._send_cors_headers()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"status":"ok","latency_ms":3500,"result":"Unindexed query completed with high latency"}')
             return
 
         # Fallback 404
-        self._send_cors_headers()
         self.send_response(404)
+        self._send_cors_headers()
         self.end_headers()
 
     def do_POST(self):
@@ -410,8 +411,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         # 6. Simulate Database Failure
         if parsed.path == "/api/simulate/db-failure":
-            self._send_cors_headers()
             self.send_response(500)
+            self._send_cors_headers()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"error":"DatabaseConnectionError","message":"PostgreSQL connection pool exhausted (max=100) at pool.js:88"}')
@@ -420,15 +421,15 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         # 7. Toggle Health State
         if parsed.path == "/api/simulate/toggle-health":
             SERVER_STATE["simulate_down"] = not SERVER_STATE["simulate_down"]
-            self._send_cors_headers()
             self.send_response(200)
+            self._send_cors_headers()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(SERVER_STATE).encode("utf-8"))
             return
 
-        self._send_cors_headers()
         self.send_response(404)
+        self._send_cors_headers()
         self.end_headers()
 
     def log_message(self, format, *args):
