@@ -31,6 +31,11 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Pass through intentional cancellations / aborts so caller abort handlers work cleanly
+    if (axios.isCancel(error) || error?.name === "CanceledError" || error?.name === "AbortError" || error?.code === "ERR_CANCELED") {
+      return Promise.reject(error);
+    }
+
     let normalizedError = {
       message: "An unexpected error occurred.",
       status: error.response?.status || 0,
